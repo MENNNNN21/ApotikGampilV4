@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-
 class Order extends Model
 {
     use HasFactory;
@@ -28,6 +27,8 @@ class Order extends Model
         'courier_name',
         'courier_service',
         'tracking_number',
+        'tracking_id', // Added for Biteship
+        'waybill_id', // Added for Biteship
         'courier_details',
         'biteship_order_id',
         'notes',
