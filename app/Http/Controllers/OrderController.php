@@ -15,389 +15,196 @@ use Exception;
 
 class OrderController extends Controller
 {
-    private BiteshipService $biteshipService;
-
-    public function __construct(BiteshipService $biteshipService)
-    {
-        $this->middleware('auth');
-        $this->biteshipService = $biteshipService;
-    }
-
-    /**
-     * Calculate shipping cost
-     */
-    public function calculateShipping(Request $request): JsonResponse
-    {
-        $request->validate([
-            'obat_id' => 'required|exists:obat,id',
-            'quantity' => 'required|integer|min:1',
-            'postal_code' => 'required|string|size:5',
-        ]);
-
-        try {
-            $obat = Obat::findOrFail($request->obat_id);
-            $quantity = $request->quantity;
-            
-            // Calculate total weight
-            $totalWeight = ($obat->weight ?? 100) * $quantity; // Default 100g if weight not set
-            
-            // Prepare items for Biteship
-            $items = BiteshipService::formatItems([
-                [
-                    'name' => $obat->nama,
-                    'description' => $obat->deskripsi ?? $obat->nama,
-                    'value' => $obat->harga,
-                    'weight' => $obat->weight ?? 100,
-                    'quantity' => $quantity,
-                ]
-            ]);
-
-            // Get shipping rates
-            $shippingResponse = $this->biteshipService->getShippingRates([
-                'destination_postal_code' => $request->postal_code,
-                'items' => $items,
-            ]);
-
-            if (!$shippingResponse['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => $shippingResponse['message'] ?? 'Gagal menghitung ongkir',
-                ], 400);
-            }
-
-            // Parse shipping rates
-            $rates = BiteshipService::parseShippingRates($shippingResponse['data']);
-
-            if (empty($rates)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak ada layanan pengiriman yang tersedia untuk kode pos ini',
-                ], 404);
-            }
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'rates' => $rates,
-                    'product' => [
-                        'name' => $obat->nama,
-                        'price' => $obat->harga,
-                        'weight' => $obat->weight ?? 100,
-                        'subtotal' => $obat->harga * $quantity,
-                    ]
-                ]
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Calculate Shipping Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem. Silakan coba lagi.',
-            ], 500);
-        }
-    }
-
-    /**
-     * Get area suggestions by postal code
-     */
-    public function getAreaByPostalCode(Request $request): JsonResponse
-    {
-        $request->validate([
-            'postal_code' => 'required|string|size:5',
-        ]);
-
-        try {
-            $result = $this->biteshipService->getAreaByPostalCode($request->postal_code);
-            
-            if (!$result['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Kode pos tidak ditemukan',
-                ], 404);
-            }
-
-            $areas = $result['data']['areas'] ?? [];
-            
-            if (empty($areas)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Tidak ada area yang ditemukan untuk kode pos ini',
-                ], 404);
-            }
-
-            // Get the first area match
-            $area = $areas[0];
-            
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'city' => $area['administrative_division_level_2_name'] ?? '',
-                    'district' => $area['administrative_division_level_3_name'] ?? '',
-                    'postal_code' => $area['postal_code'] ?? $request->postal_code,
-                    'province' => $area['administrative_division_level_1_name'] ?? '',
-                ]
-            ]);
-
-        } catch (Exception $e) {
-            Log::error('Get Area Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Gagal mendapatkan informasi area',
-            ], 500);
-        }
-    }
-
-    /**
-     * Process purchase
-     */
     public function purchase(PurchaseRequest $request)
-    {
-        try {
-            DB::beginTransaction();
-            
-            $data = $request->getProcessedData();
-            $obat = Obat::findOrFail($data['obat_id']);
-            
-            // Check stock availability
-            if ($obat->stock < $data['quantity']) {
-                return back()->withErrors(['quantity' => 'Stok tidak mencukupi. Stok tersedia: ' . $obat->stock]);
-            }
-            
-            // Calculate totals
-            $subtotal = $obat->harga * $data['quantity'];
-            $shippingCost = $data['shipping_cost'];
-            $total = $subtotal + $shippingCost;
-            
-            // Create order
-            $order = Order::create([
-                'order_number' => Order::generateOrderNumber(),
-                'user_id' => auth()->id(),
-                'subtotal' => $subtotal,
-                'shipping_cost' => $shippingCost,
-                'total' => $total,
-                'status' => 'pending',
-                'recipient_name' => $data['recipient_name'],
-                'recipient_phone' => $data['recipient_phone'],
-                'shipping_address' => $data['shipping_address'],
-                'city' => $data['city'],
-                'district' => $data['district'],
-                'postal_code' => $data['postal_code'],
-                'courier_name' => $data['courier_name'],
-                'courier_service' => $data['courier_service'],
-                'courier_details' => $data['courier_details'],
-                'notes' => $data['notes'] ?? null,
-            ]);
-            
-            // Create order item
-            OrderItem::create([
-                'order_id' => $order->id,
-                'obat_id' => $obat->id,
-                'product_name' => $obat->nama,
-                'price' => $obat->harga,
-                'quantity' => $data['quantity'],
-                'weight' => $obat->weight ?? 100,
-                'subtotal' => $subtotal,
-            ]);
-            
-            // Update stock
-            $obat->decrement('stock', $data['quantity']);
-            
-            // Create delivery if needed (optional)
-            $this->createDeliveryOrder($order, $data);
-            
-            DB::commit();
-            
-            return redirect()->route('orders.success', $order->id)
-                ->with('success', 'Pesanan berhasil dibuat! Nomor pesanan: ' . $order->order_number);
-            
-        } catch (Exception $e) {
-            DB::rollback();
-            Log::error('Purchase Error: ' . $e->getMessage());
-            
-            return back()->withErrors(['error' => 'Terjadi kesalahan saat memproses pesanan. Silakan coba lagi.'])
-                ->withInput();
+{
+    Log::info('Masuk ke purchase function');
+    try {
+        DB::beginTransaction();
+
+        $obat = Obat::findOrFail($request->obat_id);
+
+        // Check stock availability
+        if ($obat->stock < $request->quantity) {
+            return back()->withErrors(['quantity' => 'Stok tidak mencukupi.']);
         }
-    }
 
-    /**
-     * Create delivery order through Biteship (optional)
-     */
-    private function createDeliveryOrder(Order $order, array $data): void
-    {
-        try {
-            $deliveryData = [
-                'shipper_contact_name' => config('app.pharmacy_name', 'Apotek Gampil'),
-                'shipper_contact_phone' => config('app.pharmacy_phone'),
-                'shipper_contact_email' => config('app.pharmacy_email'),
-                'shipper_organization' => config('app.pharmacy_name', 'Apotek Gampil'),
-                'origin_contact_name' => config('app.pharmacy_contact_name'),
-                'origin_contact_phone' => config('app.pharmacy_phone'),
-                'origin_address' => config('app.pharmacy_address'),
-                'origin_postal_code' => config('app.pharmacy_postal_code'),
-                'destination_contact_name' => $data['recipient_name'],
-                'destination_contact_phone' => $data['recipient_phone'],
-                'destination_address' => $data['shipping_address'],
-                'destination_postal_code' => $data['postal_code'],
-                'courier_company' => $data['courier_name'],
-                'courier_type' => $data['courier_service'],
-                'items' => [
-                    [
-                        'name' => $order->items->first()->product_name,
-                        'description' => 'Obat-obatan',
-                        'value' => $order->subtotal,
-                        'weight' => $order->items->sum(function($item) {
-                            return $item->weight * $item->quantity;
-                        }),
-                        'quantity' => $order->items->sum('quantity'),
-                    ]
-                ],
-                'reference_id' => $order->order_number,
-            ];
+        // Prepare shipping data based on method
+        $shippingData = $this->prepareShippingData($request);
 
-            $response = $this->biteshipService->createDeliveryOrder($deliveryData);
-            
-            if ($response['success']) {
-                $order->update([
-                    'tracking_id' => $response['data']['id'] ?? null,
-                    'waybill_id' => $response['data']['waybill_id'] ?? null,
-                ]);
-                
-                Log::info('Delivery order created successfully', [
-                    'order_id' => $order->id,
-                    'tracking_id' => $response['data']['id'] ?? null
-                ]);
-            }
-        } catch (Exception $e) {
-            Log::error('Failed to create delivery order: ' . $e->getMessage(), [
-                'order_id' => $order->id
-            ]);
-            // Don't fail the main order process if delivery creation fails
-        }
-    }
+        // Hitung subtotal dan total amount
+        $subtotal = $obat->harga * $request->quantity;
+        $total = $subtotal + ($shippingData['shipping_cost'] ?? 0);
 
-    /**
-     * Track order shipment
-     */
-    public function trackShipment(Request $request): JsonResponse
-    {
-        $request->validate([
-            'order_id' => 'required|exists:orders,id',
+        // Create order
+        $order = Order::create([
+            'user_id' => auth()->id(),
+            'order_number' => $this->generateOrderNumber(),
+            'subtotal' => $subtotal,
+            'total' => $total,
+            'shipping_method' => $request->shipping_method,
+            'shipping_cost' => $shippingData['shipping_cost'] ?? 0,
+            'recipient_name' => $shippingData['recipient_name'],
+            'recipient_phone' => $shippingData['recipient_phone'],
+            'shipping_address' => $shippingData['shipping_address'],
+            'postal_code' => $shippingData['postal_code'] ?? null,
+            'city' => $shippingData['city'] ?? null,
+            'district' => $shippingData['district'] ?? null,
+            'courier_name' => $shippingData['courier_name'] ?? null,
+            'courier_service' => $shippingData['courier_service'] ?? null,
+            'courier_details' => $shippingData['courier_details'] ?? null,
+            'notes' => $request->notes,
+            'status' => 'pending',
         ]);
 
-        try {
-            $order = Order::where('id', $request->order_id)
-                ->where('user_id', auth()->id())
-                ->firstOrFail();
+        // Create order item
+        OrderItem::create([
+            'order_id' => $order->id,
+            'obat_id' => $obat->id,
+            'quantity' => $request->quantity,
+            'price' => $obat->harga,
+            'subtotal' => $subtotal, // pakai nilai yang sudah dihitung
+        ]);
 
-            if (!$order->tracking_id) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Nomor tracking belum tersedia',
-                ], 400);
-            }
+        // Update stock
+        $obat->decrement('stock', $request->quantity);
 
-            $trackingResponse = $this->biteshipService->trackOrder($order->tracking_id);
+        DB::commit();
 
-            if (!$trackingResponse['success']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Gagal melacak pesanan',
-                ], 400);
-            }
+        return redirect()->route('orders.show', $order)
+            ->with('success', 'Pesanan berhasil dibuat!');
 
-            return response()->json([
-                'success' => true,
-                'data' => $trackingResponse['data']
-            ]);
+    } catch (Exception $e) {
+        DB::rollBack();
+        Log::error('Purchase error: ' . $e->getMessage());
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat memproses pesanan.']);
+    }
+}
 
-        } catch (Exception $e) {
-            Log::error('Track Shipment Error: ' . $e->getMessage());
-            return response()->json([
-                'success' => false,
-                'message' => 'Terjadi kesalahan sistem',
-            ], 500);
+
+    private function prepareShippingData(PurchaseRequest $request): array
+    {
+        switch ($request->shipping_method) {
+            case 'courier':
+                return [
+                    'recipient_name' => $request->recipient_name,
+                    'recipient_phone' => $request->recipient_phone,
+                    'shipping_address' => $request->shipping_address,
+                    'postal_code' => $request->postal_code,
+                    'city' => $request->city,
+                    'district' => $request->district,
+                    'courier_name' => $request->courier_name,
+                    'courier_service' => $request->courier_service,
+                    'courier_details' => $request->courier_details,
+                    'shipping_cost' => $request->shipping_cost,
+                ];
+
+            case 'instant':
+                return [
+                    'recipient_name' => $request->instant_recipient_name,
+                    'recipient_phone' => $request->instant_recipient_phone,
+                    'shipping_address' => $request->instant_shipping_address,
+                    'postal_code' => $request->instant_postal_code,
+                    'city' => 'Bandung',
+                    'district' => 'Bandung',
+                    'courier_name' => 'Instant',
+                    'courier_service' => 'Gojek/GrabExpress',
+                    'courier_details' => null,
+                    'shipping_cost' => 0,
+                ];
+
+            case 'pickup':
+                return [
+                    'recipient_name' => auth()->user()->name,
+                    'recipient_phone' => auth()->user()->phone ?? '08123456789',
+                    'shipping_address' => 'Pickup di Apotek',
+                    'postal_code' => null,
+                    'city' => null,
+                    'district' => null,
+                    'courier_name' => 'Pickup',
+                    'courier_service' => 'Ambil di Apotek',
+                    'courier_details' => null,
+                    'shipping_cost' => 0,
+                ];
+
+            default:
+                throw new Exception('Invalid shipping method');
         }
     }
 
-    /**
-     * Show success page
-     */
-    public function success($orderId)
+    private function generateOrderNumber(): string
     {
-        $order = Order::with('items.obat')
-            ->where('id', $orderId)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
-            
-        return view('orders.success', compact('order'));
+        return 'ORD-' . date('Ymd') . '-' . strtoupper(uniqid());
     }
 
-    /**
-     * Show user orders
-     */
-    public function index()
-    {
-        $orders = Order::with('items')
-            ->where('user_id', auth()->id())
-            ->orderBy('created_at', 'desc')
-            ->paginate(10);
-            
-        return view('orders.index', compact('orders'));
-    }
+    public function showPaymentForm(Request $request)
+{
+    $obat = Obat::findOrFail($request->obat_id);
+    $quantity = $request->quantity ?? 1;
 
-    /**
-     * Show order details
-     */
-    public function show($id)
-    {
-        $order = Order::with('items.obat')
-            ->where('id', $id)
-            ->where('user_id', auth()->id())
-            ->firstOrFail();
-            
-        return view('orders.show', compact('order'));
-    }
+    return view('checkout.payment', compact('obat', 'quantity'));
+}
 
-    /**
-     * Cancel order (if still pending)
-     */
-    public function cancel($id)
-    {
-        try {
-            DB::beginTransaction();
-            
-            $order = Order::with('items')
-                ->where('id', $id)
-                ->where('user_id', auth()->id())
-                ->where('status', 'pending')
-                ->firstOrFail();
+public function processCheckout(Request $request)
+{
+    try {
+        DB::beginTransaction();
 
-            // Restore stock
-            foreach ($order->items as $item) {
-                $obat = Obat::find($item->obat_id);
-                if ($obat) {
-                    $obat->increment('stock', $item->quantity);
-                }
-            }
+        $obat = Obat::findOrFail($request->obat_id);
 
-            // Update order status
-            $order->update(['status' => 'cancelled']);
-            
-            // Cancel delivery order if exists
-            if ($order->tracking_id) {
-                $this->biteshipService->cancelDeliveryOrder($order->tracking_id);
-            }
-
-            DB::commit();
-
-            return redirect()->route('orders.index')
-                ->with('success', 'Pesanan berhasil dibatalkan');
-
-        } catch (Exception $e) {
-            DB::rollback();
-            Log::error('Cancel Order Error: ' . $e->getMessage());
-            
-            return back()->withErrors(['error' => 'Gagal membatalkan pesanan']);
+        if ($obat->stock < $request->quantity) {
+            return back()->withErrors(['quantity' => 'Stok tidak mencukupi.']);
         }
+
+        // Hitung subtotal dan total
+        $subtotal = $obat->harga * $request->quantity;
+        $shippingCost = ($request->shipping_method === 'delivery') ? 15000 : 0;
+        $total = $subtotal + $shippingCost;
+
+        // Buat order
+        $order = Order::create([
+            'user_id' => auth()->id(),
+            'order_number' => $this->generateOrderNumber(),
+            'subtotal' => $subtotal,
+            'total' => $total,
+            'shipping_cost' => $shippingCost,
+            'recipient_name' => $request->recipient_name ?? auth()->user()->name,
+            'recipient_phone' => $request->recipient_phone ?? auth()->user()->phone,
+            'shipping_address' => $request->shipping_address ?? 'Pickup di Apotek',
+            'postal_code' => $request->postal_code,
+            'city' => $request->city,
+            'district' => $request->district,
+            'courier_name' => $request->courier ?? 'Pickup',
+            'courier_service' => $request->courier === 'regular' ? 'Reguler' : ($request->courier === 'instant' ? 'Instan' : 'Ambil di Apotek'),
+            'payment_method' => $request->payment_method,
+            'notes' => $request->notes,
+            'status' => 'pending',
+        ]);
+
+        // Simpan bukti pembayaran jika ada
+        if ($request->hasFile('payment_proof')) {
+            $filename = $request->file('payment_proof')->store('payment_proofs', 'public');
+            $order->update(['payment_proof' => $filename]);
+        }
+
+        // Order item
+        OrderItem::create([
+            'order_id' => $order->id,
+            'obat_id' => $obat->id,
+            'quantity' => $request->quantity,
+            'price' => $obat->harga,
+            'subtotal' => $subtotal,
+        ]);
+
+        $obat->decrement('stock', $request->quantity);
+
+        DB::commit();
+        return redirect()->route('orders.show', $order->id)->with('success', 'Pesanan berhasil dibuat!');
+
+    } catch (Exception $e) {
+        DB::rollBack();
+        Log::error('Checkout error: ' . $e->getMessage());
+        return back()->withErrors(['error' => 'Terjadi kesalahan saat memproses checkout.']);
     }
+}
+
 }

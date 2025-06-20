@@ -6,9 +6,11 @@
      <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - Apotik Gampil</title>
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Custom CSS -->
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
+    <!-- Vite -->
+    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
@@ -364,7 +366,7 @@
             </div>
         </div>
     </footer>
-     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+     
     
     <script>
         // Add scroll effect to navbar

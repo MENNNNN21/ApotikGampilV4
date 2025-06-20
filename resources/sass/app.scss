@@ -1,8 +1,9 @@
+// resources/sass/app.scss
+
+// [BENAR] Langkah 1: Panggil semua modul dengan @use di bagian paling atas.
+@use 'variables';
+@use 'bootstrap/scss/bootstrap' ;
+
+// [BENAR] Langkah 2: Aturan lain seperti @import atau style custom diletakkan setelahnya.
 // Fonts
 @import url('https://fonts.bunny.net/css?family=Nunito');
-
-// Variables
-@import 'variables';
-
-// Bootstrap
-@import 'bootstrap/scss/bootstrap';

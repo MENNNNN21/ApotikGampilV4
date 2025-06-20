@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ShippingController;
+use App\Http\Controllers\CheckoutController;
 
 
 
@@ -45,11 +46,20 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::get('/orders/{id}/success', [OrderController::class, 'success'])->name('orders.success');
     Route::post('/orders/purchase', [OrderController::class, 'purchase'])->name('orders.purchase');
+
+
+
     
     // AJAX Routes for shipping
     Route::post('/api/calculate-shipping', [OrderController::class, 'calculateShipping'])->name('api.calculate-shipping');
     Route::post('/api/get-area', [OrderController::class, 'getAreaByPostalCode'])->name('api.get-area');
 });
+
+Route::post('/checkout/payment', [CheckoutController::class, 'showCheckoutPage'])->name('checkout.show')->middleware('auth');
+Route::post('/checkout/process', [CheckoutController::class, 'processOrder'])->name('checkout.process')->middleware('auth');
+
+Route::get('/checkout/payment', [OrderController::class, 'showPaymentForm'])->name('checkout.payment');
+Route::post('/checkout/process', [OrderController::class, 'processCheckout'])->name('checkout.process');
 
 // Cart Routes
 
@@ -62,6 +72,12 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
 });
 
+// Rute untuk proses Checkout (membutuhkan login pengguna)
+Route::middleware(['auth'])->group(function () {
+    Route::post('/checkout', [\App\Http\Controllers\CheckoutController::class, 'showCheckoutPage'])->name('checkout.show');
+    Route::post('/checkout/process', [\App\Http\Controllers\CheckoutController::class, 'processOrder'])->name('checkout.process');
+});
+
 // Admin routes
 Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
 Route::post('/admin/login', [AdminLoginController::class, 'login']);
@@ -72,6 +88,19 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
     Route::resource('products', \App\Http\Controllers\Admin\ProductController::class);
     Route::resource('articles', \App\Http\Controllers\Admin\ArticleController::class);
     Route::resource('categories', \App\Http\Controllers\Admin\KategoriController::class);
+    Route::get('/orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/verify', [\App\Http\Controllers\Admin\OrderController::class, 'verifyPayment'])->name('orders.verify');
+    Route::post('/orders/{id}/reject', [\App\Http\Controllers\Admin\OrderController::class, 'rejectPayment'])->name('orders.reject');;
+});
+
+
+
+Route::prefix('admin')->middleware(['auth', 'is_admin'])->name('admin.')->group(function () {
+    Route::get('/orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{id}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/verify', [\App\Http\Controllers\Admin\OrderController::class, 'verifyPayment'])->name('orders.verify');
+    Route::post('/orders/{id}/reject', [\App\Http\Controllers\Admin\OrderController::class, 'rejectPayment'])->name('orders.reject');
 });
 
 Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');

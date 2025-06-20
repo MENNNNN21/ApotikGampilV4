@@ -34,9 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
-    'biteship' => [
-    'key' => env('BITESHIP_API_KEY'),
-    'url' => env('BITESHIP_API_URL', 'https://api.biteship.com/v1'),
+  // file: config/services.php
+
+'biteship' => [
+    'api_key' => env('BITESHIP_API_KEY'), // <-- Sumber masalahnya di sini
+    'base_url' => env('BITESHIP_BASE_URL', 'https://api.biteship.com'),
 ],
 
     
