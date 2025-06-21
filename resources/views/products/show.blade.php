@@ -1,39 +1,45 @@
 @extends('layouts.app')
 
-@section('title', $medicine->nama)
+@section('content')
+<div class="container">
+    <h2>{{ $obat->nama }}</h2>
+    <p>{{ $obat->deskripsi }}</p>
+@extends('layouts.app')
+
+@section('title', $obat->nama)
 
 @section('content')
 <div class="container py-5">
     <div class="row">
         <div class="col-md-6">
-            {{-- Ganti 'gambar' menjadi 'image' --}}
-            <img src="{{ asset('storage/' . $medicine->image) }}" class="img-fluid rounded shadow" alt="{{ $medicine->nama }}">
+<img src="{{ asset('storage/' . $obat->image) }}" alt="{{ $obat->name }}" class="w-full h-auto object-cover rounded-lg">    
         </div>
         <div class="col-md-6">
-            <h2 class="mb-3">{{ $medicine->nama }}</h2>
+            <h2 class="mb-3">{{ $obat->nama }}</h2>
             
             <div class="row mb-3">
                 <div class="col-md-6">
                     <h5 class="text-success">Harga</h5>
-                    <h4 class="text-primary fw-bold">Rp {{ number_format($medicine->harga, 0, ',', '.') }}</h4>
+                    <h4 class="text-primary fw-bold">Rp {{ number_format($obat->harga, 0, ',', '.') }}</h4>
                 </div>
                 <div class="col-md-6">
                     <h5>Stok</h5>
-                    <p class="badge bg-success fs-6">{{ $medicine->stock }} tersedia</p>
+                    <p class="badge bg-success fs-6">{{ $obat->stock }} tersedia</p>
                 </div>
             </div>
 
-            @if($medicine->stock > 0)
-            <form method="POST" action="{{ route('checkout.payment') }}">
+            @if($obat->stock > 0)
+          <form action="{{ route('#') }}" method="get" id="purchaseForm">
+
                 @csrf
-                <input type="hidden" name="obat_id" value="{{ $medicine->id }}">
+                <input type="hidden" name="obat_id" value="{{ $obat->id }}">
                 
                 <div class="mb-4">
                     <label for="quantity" class="form-label fw-bold">Jumlah</label>
                     <div class="input-group" style="max-width: 200px;">
                         <button type="button" class="btn btn-outline-secondary" id="decreaseQty">-</button>
                         <input type="number" class="form-control text-center" id="quantity" name="quantity" 
-                               value="1" min="1" max="{{ $medicine->stock }}" required>
+                               value="1" min="1" max="{{ $obat->stock }}" required>
                         <button type="button" class="btn btn-outline-secondary" id="increaseQty">+</button>
                     </div>
                     @error('quantity')
@@ -189,7 +195,7 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between mb-2">
                             <span>Subtotal (<span id="summaryQty">1</span> item)</span>
-                            <span id="summarySubtotal">Rp {{ number_format($medicine->harga, 0, ',', '.') }}</span>
+                            <span id="summarySubtotal">Rp {{ number_format($obat->harga, 0, ',', '.') }}</span>
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span>Ongkos Kirim</span>
@@ -237,25 +243,25 @@
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Deskripsi</h6>
-                            <p>{{ $medicine->deskripsi }}</p>
+                            <p>{{ $obat->deskripsi }}</p>
                         </div>
                         <div class="col-md-6">
                             <h6>Dosis</h6>
-                            <p>{{ $medicine->dosis }}</p>
+                            <p>{{ $obat->dosis }}</p>
                         </div>
                     </div>
                     
-                    @if($medicine->efek_samping)
+                    @if($obat->efek_samping)
                     <div class="mt-3">
                         <h6>Efek Samping</h6>
-                        <p>{{ $medicine->efek_samping }}</p>
+                        <p>{{ $obat->efek_samping }}</p>
                     </div>
                     @endif
 
-                    @if($medicine->kontraindikasi)
+                    @if($obat->kontraindikasi)
                     <div class="mt-3">
                         <h6>Kontraindikasi</h6>
-                        <p>{{ $medicine->kontraindikasi }}</p>
+                        <p>{{ $obat->kontraindikasi }}</p>
                     </div>
                     @endif
                 </div>
@@ -285,8 +291,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const courierNameInput = document.getElementById('courier_name');
     const courierServiceInput = document.getElementById('courier_service');
     const courierDetailsInput = document.getElementById('courier_details');
-    const productPrice = {{ $medicine->harga }};
-    const maxStock = {{ $medicine->stock }};
+    const productPrice = {{ $obat->harga }};
+    const maxStock = {{ $obat->stock }};
     
     // Courier shipping fields
     const recipientNameInput = document.getElementById('recipient_name');
@@ -634,3 +640,24 @@ document.addEventListener('DOMContentLoaded', function() {
 @endpush
 @endsection
 
+    <p>Harga: Rp{{ number_format($obat->harga, 0, ',', '.') }}</p>
+    <p>Stok: {{ $obat->stock }}</p>
+
+    <form action="{{ route('checkout.show') }}" method="GET">
+        <input type="hidden" name="obat_id" value="{{ $obat->id }}">
+        <div class="mb-3">
+            <label for="quantity" class="form-label">Jumlah</label>
+            <input type="number" name="quantity" min="1" max="{{ $obat->stock }}" class="form-control" value="1" required>
+        </div>
+        <div class="mb-3">
+            <label for="shipping_method" class="form-label">Metode Pengiriman</label>
+            <select name="shipping_method" class="form-control" required>
+                <option value="pickup">Ambil di Apotek</option>
+                <option value="delivery">Delivery</option>
+                <option value="courier">Kurir Instant</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-success">Checkout</button>
+    </form>
+</div>
+@endsection

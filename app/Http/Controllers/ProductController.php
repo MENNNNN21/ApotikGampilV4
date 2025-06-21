@@ -26,7 +26,7 @@ class ProductController extends Controller
 
     public function show($id)
     {
-        $medicine = Obat::findOrFail($id);
-        return view('products.show', compact('medicine'));
+        $obat = Obat::findOrFail($id);
+        return view('products.show', compact('obat'));
     }
 }
