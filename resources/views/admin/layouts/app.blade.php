@@ -125,6 +125,11 @@
                     <i class="fas fa-newspaper me-2"></i>
                     Artikel
                 </a>
+                <a href="{{ route('admin.orders.index') }}"
+                class="list-group-item list-group-item-action {{ request()->routeIs('admin.orders.*') ? 'active' : '' }}">
+                <i class="fas fa-shopping-cart me-2"></i>
+                Pesanan
+                </a>
             </div>
         </div>
 

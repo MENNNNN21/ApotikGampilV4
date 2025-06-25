@@ -21,7 +21,7 @@
                 
                 <!-- Image Container -->
                 <div class="position-relative overflow-hidden" style="height: 200px;">
-                    <img src="{{ asset('storage/' . $article->avatar) }}" 
+                    <img src="{{ asset('storage/' . $article->image) }}" 
                          class="card-img-top w-100 h-100 object-fit-cover transition-transform" 
                          alt="{{ $article->title }}"
                          style="transition: transform 0.3s ease;">

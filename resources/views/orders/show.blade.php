@@ -1,93 +1,55 @@
 @extends('layouts.app')
-
 @section('title', 'Detail Pesanan ' . $order->order_number)
 
 @section('content')
 <div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2 class="h2 mb-1">Detail Pesanan</h2>
-            <p class="text-muted">
-                Nomor Pesanan: <span class="fw-bold text-primary">{{ $order->order_number }}</span>
-            </p>
+    <h2>Detail Pesanan <span class="text-primary">{{ $order->order_number }}</span></h2>
+    
+    @if(session('success'))
+        <div class="alert alert-success">
+            {{ session('success') }}
         </div>
-        <a href="{{ route('orders.index') }}" class="btn btn-outline-primary">
-            <i class="fas fa-arrow-left me-2"></i>Kembali ke Riwayat
-        </a>
-    </div>
+    @endif
 
-    <div class="row g-4">
-        {{-- Order Details --}}
-        <div class="col-lg-8">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Pesanan Dibuat pada {{ $order->created_at->format('d F Y, H:i') }}</h5>
-                    <span class="badge bg-{{ $order->getStatusColorAttribute() }} fs-6">
-                        {{ $order->getStatusLabelAttribute() }}
-                    </span>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between">
+            <span>Tanggal Pesan: {{ $order->created_at->format('d F Y') }}</span>
+            <span class="badge bg-{{ $order->status_color }}">{{ $order->status_label }}</span>
+        </div>
+        <div class="card-body">
+            <p><strong>Total Pembayaran:</strong> Rp {{ number_format($order->total, 0, ',', '.') }}</p>
+            <p><strong>Metode Pembayaran:</strong> {{ strtoupper($order->payment_method) }}</p>
+            <hr>
+
+            {{-- Tampilkan bukti yang sudah diupload --}}
+            @if($order->payment_proof)
+                <div class="mb-3">
+                    <h6>Bukti Pembayaran Anda:</h6>
+                    <img src="{{ asset('storage/' . $order->payment_proof) }}" alt="Bukti Pembayaran" class="img-fluid rounded" style="max-height: 400px;">
                 </div>
-                <div class="card-body">
-                    {{-- Item List --}}
-                    <h6>Daftar Produk</h6>
-                    <table class="table table-borderless">
-                        <tbody>
-                            @foreach($order->items as $item)
-                            <tr>
-                                <td>
-                                    @if($item->obat && $item->obat->image)
-                                    <img src="{{ asset('storage/' . $item->obat->image) }}" class="img-fluid rounded" style="width: 60px; height: 60px; object-fit: cover;" alt="{{ $item->product_name }}">
-                                    @endif
-                                </td>
-                                <td>
-                                    <p class="mb-0 fw-bold">{{ $item->product_name }}</p>
-                                    <small class="text-muted">{{ $item->quantity }} x {{ $item->getFormattedPriceAttribute() }}</small>
-                                </td>
-                                <td class="text-end fw-bold">{{ $item->getFormattedSubtotalAttribute() }}</td>
-                            </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    <hr>
-                    {{-- Order Totals --}}
-                    <div class="row justify-content-end">
-                        <div class="col-md-6">
-                            <dl class="row text-end">
-                                <dt class="col-sm-6">Subtotal</dt>
-                                <dd class="col-sm-6">{{ $order->getFormattedSubtotalAttribute() }}</dd>
+            @endif
 
-                                <dt class="col-sm-6">Ongkos Kirim</dt>
-                                <dd class="col-sm-6">{{ $order->getFormattedShippingCostAttribute() }}</dd>
 
-                                <dt class="col-sm-6 fs-5">Total</dt>
-                                <dd class="col-sm-6 fw-bold fs-5 text-primary">{{ $order->getFormattedTotalAttribute() }}</dd>
-                            </dl>
-                        </div>
+            {{-- Form Upload hanya muncul jika status 'Menunggu Pembayaran' --}}
+            @if($order->status == 'pending' && in_array($order->payment_method, ['qris', 'transfer']))
+                <div class="card mt-4">
+                    <div class="card-body bg-light">
+                        <h5 class="card-title">Konfirmasi Pembayaran</h5>
+                        <p>Silakan unggah bukti pembayaran Anda di sini.</p>
+                        <form action="{{ route('orders.upload_proof', $order) }}" method="POST" enctype="multipart/form-data">
+                            @csrf
+                            <div class="mb-3">
+                                <label for="payment_proof" class="form-label">File Bukti Pembayaran</label>
+                                <input class="form-control @error('payment_proof') is-invalid @enderror" type="file" id="payment_proof" name="payment_proof" required>
+                                @error('payment_proof')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <button type="submit" class="btn btn-primary">Unggah Bukti</button>
+                        </form>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        {{-- Shipping Info --}}
-        <div class="col-lg-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-light">
-                    <h5 class="mb-0">Informasi Pengiriman</h5>
-                </div>
-                <div class="card-body">
-                    <h6 class="fw-bold">{{ $order->recipient_name }}</h6>
-                    <p class="text-muted mb-2">{{ $order->recipient_phone }}</p>
-                    <p class="text-muted lh-base">
-                        {{ $order->shipping_address }},<br>
-                        {{ $order->district }}, {{ $order->city }},<br>
-                        {{ $order->postal_code }}
-                    </p>
-                    <hr>
-                    <p class="mb-1"><strong class="d-block">Kurir:</strong> {{ $order->courier_name }} - {{ $order->courier_service }}</p>
-                    @if($order->waybill_id)
-                        <p class="mb-0"><strong class="d-block">No. Resi:</strong> {{ $order->waybill_id }}</p>
-                    @endif
-                </div>
-            </div>
+            @endif
         </div>
     </div>
 </div>

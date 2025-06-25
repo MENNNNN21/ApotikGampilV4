@@ -305,6 +305,10 @@
                                     </a>
                                 </li>
                                 <li>
+                                    <a class="dropdown-item" href="{{route('orders.index')}}">
+                                        <i class="fas fa-shopping-cart me-2"></i>Pesanan
+                                    </a>
+                                <li>
                                     <a class="dropdown-item" href="{{ route('profile.edit') }}">
                                         <i class="fas fa-cog me-2"></i>Edit Profil
                                     </a>

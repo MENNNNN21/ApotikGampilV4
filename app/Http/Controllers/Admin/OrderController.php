@@ -4,106 +4,130 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Obat;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class OrderController extends Controller
 {
     /**
-     * Menampilkan daftar semua pesanan.
+     * Memastikan semua method di controller ini hanya bisa diakses oleh admin yang sudah login.
      */
-   public function index(Request $request)
+    public function __construct()
     {
-        $query = Order::with('user');
-
-        // Filter status
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // Filter metode pembayaran
-        if ($request->filled('payment_method')) {
-            $query->where('payment_method', $request->payment_method);
-        }
-
-        // Pencarian berdasarkan order_number atau nama user
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('order_number', 'like', "%$search%")
-                  ->orWhereHas('user', function ($qu) use ($search) {
-                      $qu->where('name', 'like', "%$search%");
-                  });
-            });
-        }
-
-        $orders = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
-
-        // Untuk dropdown filter
-        $statuses = [
-            'pending', 'pending_verification', 'processing', 'ready_for_pickup',
-            'shipped', 'completed', 'cancelled', 'payment_rejected', 'menunggu_pickup'
-        ];
-        $paymentMethods = ['qris', 'transfer', 'cod'];
-
-        return view('admin.orders.index', compact('orders', 'statuses', 'paymentMethods'));
+        // Jika Anda menggunakan middleware 'auth:admin' atau sejenisnya,
+        // Anda bisa menambahkannya di sini untuk melindungi seluruh controller.
+        // Contoh: $this->middleware('auth:admin');
     }
 
     /**
-     * Menampilkan detail satu pesanan.
+     * Menampilkan daftar semua pesanan.
      */
-    public function show($id)
+    public function index(Request $request)
     {
-        $order = Order::with(['user', 'items.obat'])->findOrFail($id);
+        // Memulai query dasar, diurutkan dari yang terbaru
+        $query = Order::latest();
+
+        // Filter berdasarkan status jika ada parameter 'status' di URL
+        if ($request->has('status') && $request->status != '') {
+            $query->where('status', $request->status);
+        }
+
+        // Filter berdasarkan pencarian nomor pesanan
+        if ($request->has('search') && $request->search != '') {
+            $query->where('order_number', 'like', '%' . $request->search . '%');
+        }
+        
+        // Ambil data dengan paginasi
+        $orders = $query->paginate(15)->withQueryString();
+
+        return view('admin.orders.index', compact('orders'));
+    }
+
+    /**
+     * Menampilkan detail dari satu pesanan.
+     */
+    public function show(Order $order)
+    {
+        // Eager load relasi untuk menghindari N+1 query problem di view
+        // Memuat item pesanan beserta produknya, dan data user yang memesan.
+        $order->load('items.obat', 'user'); 
+
         return view('admin.orders.show', compact('order'));
     }
 
     /**
-     * Memverifikasi pembayaran dan mengubah status pesanan.
+     * Memverifikasi pembayaran yang sudah diunggah oleh pengguna.
      */
-    public function verifyPayment($id)
+    public function verifyPayment(Order $order)
     {
-        $order = Order::findOrFail($id);
-
-        if ($order->status != 'pending_verification') {
-            return redirect()->route('admin.orders.show', $id)->with('error', 'Pesanan ini tidak dapat diverifikasi.');
+        // Pastikan aksi hanya bisa dilakukan jika statusnya 'pending_verification'
+        if ($order->status !== 'pending_verification') {
+            return back()->with('error', 'Aksi tidak valid untuk status pesanan saat ini.');
         }
 
-        // Tentukan status selanjutnya berdasarkan metode pengiriman
-        $nextStatus = ($order->shipping_method == 'delivery') ? 'processing' : 'ready_for_pickup';
-        
-        $order->update(['status' => $nextStatus]);
+        // Ubah status menjadi 'processing' (sedang diproses)
+        $order->update(['status' => 'processing']);
 
-        return redirect()->route('admin.orders.show', $id)->with('success', 'Pembayaran berhasil diverifikasi. Status pesanan diperbarui.');
+        // TODO: Tambahkan logika lain jika perlu, misal: mengirim notifikasi ke user.
+
+        return redirect()->route('admin.orders.show', $order)->with('success', 'Pembayaran berhasil diverifikasi. Pesanan sekarang dalam status "Sedang Diproses".');
     }
 
     /**
-     * Menolak pembayaran dan mengubah status pesanan.
+     * Menolak bukti pembayaran yang diunggah pengguna.
      */
-    public function rejectPayment($id)
+    public function rejectPayment(Order $order)
     {
-        $order = Order::with('items')->findOrFail($id);
-
-        if ($order->status != 'pending_verification') {
-            return redirect()->route('admin.orders.show', $id)->with('error', 'Pesanan ini tidak dapat ditolak.');
+        // Pastikan aksi hanya bisa dilakukan jika statusnya 'pending_verification'
+        if ($order->status !== 'pending_verification') {
+            return back()->with('error', 'Aksi tidak valid untuk status pesanan saat ini.');
         }
 
-        DB::beginTransaction();
-        try {
-            $order->update(['status' => 'payment_rejected']);
-
-            // Kembalikan stok produk
-            foreach ($order->items as $item) {
-                Obat::find($item->obat_id)->increment('stok', $item->quantity);
-            }
-            
-            DB::commit();
-            return redirect()->route('admin.orders.show', $id)->with('success', 'Pembayaran ditolak dan stok telah dikembalikan.');
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return redirect()->route('admin.orders.show', $id)->with('error', 'Gagal menolak pembayaran.');
+        // Hapus file bukti pembayaran dari storage
+        if ($order->payment_proof) {
+            Storage::disk('public')->delete($order->payment_proof);
         }
+
+        // Kembalikan status ke 'pending' dan hapus path file bukti pembayaran
+        $order->update([
+            'status' => 'pending',
+            'payment_proof' => null,
+        ]);
+
+        // TODO: Tambahkan logika untuk mengembalikan stok produk.
+
+        return redirect()->route('admin.orders.show', $order)->with('success', 'Pembayaran ditolak. Status pesanan dikembalikan ke "Menunggu Pembayaran".');
+    }
+
+
+    /**
+     * Mengubah status pesanan secara umum (misal: dikirim, selesai).
+     */
+    public function updateStatus(Request $request, Order $order)
+    {
+        $request->validate([
+            'status' => 'required|in:processing,shipped,delivered,cancelled',
+            'tracking_number' => 'nullable|required_if:status,shipped|string|max:255',
+        ]);
+
+        $newStatus = $request->input('status');
+        
+        // Data untuk diupdate
+        $updateData = ['status' => $newStatus];
+
+        // Jika status diubah menjadi 'shipped', simpan nomor resi dan tanggal pengiriman
+        if ($newStatus == 'shipped') {
+            $updateData['tracking_number'] = $request->input('tracking_number');
+            $updateData['shipped_at'] = now();
+        }
+
+        // Jika status diubah menjadi 'delivered', simpan tanggal diterima
+        if ($newStatus == 'delivered') {
+            $updateData['delivered_at'] = now();
+        }
+
+        $order->update($updateData);
+
+        return redirect()->route('admin.orders.show', $order)->with('success', 'Status pesanan berhasil diperbarui.');
     }
 }

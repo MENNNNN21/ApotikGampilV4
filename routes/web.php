@@ -22,7 +22,11 @@ use App\Http\Controllers\{
     CheckoutController
 };
 
-Auth::routes();
+
+Auth::routes(['logout' => false]);
+
+// Route Logout khusus untuk User biasa (guard 'web')
+Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 
 /*
 |--------------------------------------------------------------------------
@@ -55,6 +59,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/orders/{id}/success', [OrderController::class, 'success'])->name('orders.success');
     Route::post('/orders/purchase', [OrderController::class, 'purchase'])->name('orders.purchase');
 
+    Route::get('/checkout/{product}', [OrderController::class, 'showCheckout'])->name('checkout.show');
+Route::post('/checkout/{product}', [OrderController::class, 'processCheckout'])->name('checkout.process');
+Route::post('/payment/process', [OrderController::class, 'processPayment'])->name('payment.process');
+ Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+    
+    // Route untuk memproses upload bukti pembayaran
+    Route::post('/orders/{order}/upload-proof', [OrderController::class, 'uploadProof'])->name('orders.upload_proof');
+
     // Checkout Routes
     
 
@@ -69,31 +81,48 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.change-password');
 });
 
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN ROUTES
 |--------------------------------------------------------------------------
 */
-Route::get('/admin/login', [AdminLoginController::class, 'showLoginForm'])->name('admin.login');
-Route::post('/admin/login', [AdminLoginController::class, 'login']);
 
-Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('services', App\Http\Controllers\Admin\ServiceController::class);
-    Route::resource('products', App\Http\Controllers\Admin\ProductController::class);
-    Route::resource('articles', App\Http\Controllers\Admin\ArticleController::class);
-    Route::resource('categories', App\Http\Controllers\Admin\KategoriController::class);
 
-    // Admin Orders
-    Route::get('/orders', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
-    Route::get('/orders/{id}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
-    Route::post('/orders/{id}/verify', [App\Http\Controllers\Admin\OrderController::class, 'verifyPayment'])->name('orders.verify');
-    Route::post('/orders/{id}/reject', [App\Http\Controllers\Admin\OrderController::class, 'rejectPayment'])->name('orders.reject');
+Route::prefix('admin')->name('admin.')->group(function() {
+    
+    // Route yang TIDAK perlu login admin (Guest Routes)
+    // Route ini hanya bisa diakses jika admin BELUM login
+    Route::middleware('guest:admin')->group(function() {
+        Route::get('/login', [AdminLoginController::class, 'showLoginForm'])->name('login');
+        Route::post('/login', [AdminLoginController::class, 'login']);
+    });
+
+    // Route yang HANYA bisa diakses setelah admin login
+    // Middleware 'auth:admin' secara spesifik menggunakan guard 'admin'
+    Route::middleware('auth:admin')->group(function() {
+        Route::post('/logout', [AdminLoginController::class, 'logout'])->name('logout');
+        
+        Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index'); // Alias untuk dashboard
+
+        // Resourceful routes untuk CRUD
+        Route::resource('services', App\Http\Controllers\Admin\ServiceController::class);
+        Route::resource('products', App\Http\Controllers\Admin\ProductController::class);
+        Route::resource('articles', App\Http\Controllers\Admin\ArticleController::class);
+        Route::resource('categories', App\Http\Controllers\Admin\KategoriController::class);
+        
+        // Admin Orders
+        Route::get('/orders', [App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{order}/verify-payment', [App\Http\Controllers\Admin\OrderController::class, 'verifyPayment'])->name('orders.verify');
+        Route::post('/orders/{order}/reject-payment', [App\Http\Controllers\Admin\OrderController::class, 'rejectPayment'])->name('orders.reject');
+        Route::post('/orders/{order}/update-status', [App\Http\Controllers\Admin\OrderController::class, 'updateStatus'])->name('orders.update_status');
+    });
 });
-
 /*
 |--------------------------------------------------------------------------
 | LOGOUT
 |--------------------------------------------------------------------------
 */
-Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+

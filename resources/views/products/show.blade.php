@@ -1,9 +1,17 @@
-@extends('layouts.app')
+Of course. Based on your request, I have removed the "Pengiriman Kurir" (Courier Shipping) option from both the HTML structure and the corresponding JavaScript logic.
 
-@section('content')
-<div class="container">
-    <h2>{{ $obat->nama }}</h2>
-    <p>{{ $obat->deskripsi }}</p>
+Here are the key changes made:
+
+1.  **Removed HTML Elements**: The radio button for "Pengiriman Kurir" and the entire form section for courier address details (`courierShippingContainer`, `courierSection`) have been deleted.
+2.  **Default Selection**: "Pengiriman Instan" (Instant Shipping) is now the default selected shipping method.
+3.  **Simplified JavaScript**:
+      * All JavaScript functions and variables related to courier shipping (`calculateShipping`, `getAreaByPostalCode`, `displayCourierOptions`, etc.) have been completely removed.
+      * The logic has been streamlined to only handle the "Pengiriman Instan" and "Ambil di Apotek" (Pickup at Pharmacy) options.
+      * The form submission logic and validations have been adjusted to work without the courier option.
+
+Here is the modified and cleaned-up code:
+
+```php
 @extends('layouts.app')
 
 @section('title', $obat->nama)
@@ -12,7 +20,7 @@
 <div class="container py-5">
     <div class="row">
         <div class="col-md-6">
-<img src="{{ asset('storage/' . $obat->image) }}" alt="{{ $obat->name }}" class="w-full h-auto object-cover rounded-lg">    
+            <img src="{{ asset('storage/' . $obat->image) }}" alt="{{ $obat->name }}" class="w-full h-auto object-cover rounded-lg">
         </div>
         <div class="col-md-6">
             <h2 class="mb-3">{{ $obat->nama }}</h2>
@@ -29,8 +37,7 @@
             </div>
 
             @if($obat->stock > 0)
-          <form action="{{ route('#') }}" method="get" id="purchaseForm">
-
+            <form action="{{ route('checkout.show', ['product' => $obat->id]) }}" method="get" id="purchaseForm">
                 @csrf
                 <input type="hidden" name="obat_id" value="{{ $obat->id }}">
                 
@@ -53,13 +60,7 @@
                     </div>
                     <div class="card-body">
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="shipping_method" id="shipping_courier" value="courier" checked>
-                            <label class="form-check-label" for="shipping_courier">
-                                <strong>Pengiriman Kurir</strong> (JNE, J&T, SiCepat, dll)
-                            </label>
-                        </div>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="shipping_method" id="shipping_instant" value="instant">
+                            <input class="form-check-input" type="radio" name="shipping_method" id="shipping_instant" value="instant" checked>
                             <label class="form-check-label" for="shipping_instant">
                                 <strong>Pengiriman Instan</strong> (Gojek/GrabExpress)
                             </label>
@@ -73,30 +74,32 @@
                     </div>
                 </div>
 
-                <div id="courierShippingContainer">
+                <div id="instantShippingContainer" style="display: none;">
+                     <div class="alert alert-info">
+                        <i class="fas fa-motorcycle me-2"></i>
+                        <strong>Catatan:</strong> Layanan ini hanya tersedia untuk area <strong>Kota Bandung</strong>. Ongkos kirim (ongkir) ditanggung sepenuhnya oleh pembeli dan dibayarkan langsung kepada driver.
+                    </div>
                     <div class="card mb-4">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Informasi Pengiriman</h5>
+                         <div class="card-header bg-light">
+                            <h5 class="mb-0">Informasi Pengiriman Instan</h5>
                         </div>
                         <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="recipient_name" class="form-label">Nama Penerima <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('recipient_name') is-invalid @enderror" 
-                                           id="recipient_name" name="recipient_name" value="{{ old('recipient_name', auth()->user()->name) }}">
-                                    @error('recipient_name')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    <label for="recipient_phone" class="form-label">Nomor Telepon <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('recipient_phone') is-invalid @enderror" 
-                                           id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone') }}" 
-                                           placeholder="08xxxxxxxxxx">
-                                    @error('recipient_phone')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                            <div class="mb-3">
+                                <label for="recipient_name" class="form-label">Nama Penerima <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('recipient_name') is-invalid @enderror" 
+                                       id="recipient_name" name="recipient_name" value="{{ old('recipient_name', auth()->user()->name) }}">
+                                @error('recipient_name')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
+                                <label for="recipient_phone" class="form-label">Nomor Telepon <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('recipient_phone') is-invalid @enderror" 
+                                       id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone', auth()->user()->phone ?? '') }}" 
+                                       placeholder="08xxxxxxxxxx">
+                                @error('recipient_phone')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="mb-3">
                                 <label for="shipping_address" class="form-label">Alamat Lengkap <span class="text-danger">*</span></label>
@@ -107,84 +110,16 @@
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="row">
-                                <div class="col-md-4 mb-3">
-                                    <label for="postal_code" class="form-label">Kode Pos <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('postal_code') is-invalid @enderror" 
-                                           id="postal_code" name="postal_code" value="{{ old('postal_code') }}" 
-                                           placeholder="12345" maxlength="5">
-                                    @error('postal_code')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="city" class="form-label">Kota/Kabupaten <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('city') is-invalid @enderror" 
-                                           id="city" name="city" value="{{ old('city') }}" readonly>
-                                    @error('city')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                                <div class="col-md-4 mb-3">
-                                    <label for="district" class="form-label">Kecamatan <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control @error('district') is-invalid @enderror" 
-                                           id="district" name="district" value="{{ old('district') }}" readonly>
-                                    @error('district')
-                                        <div class="invalid-feedback">{{ $message }}</div>
-                                    @enderror
-                                </div>
+                            <div class="mb-3">
+                                <label for="postal_code" class="form-label">Kode Pos <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control @error('postal_code') is-invalid @enderror"
+                                       id="postal_code" name="postal_code" value="{{ old('postal_code') }}"
+                                       placeholder="Contoh: 40111" maxlength="5">
+                                @error('postal_code')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
-                    </div>
-
-                    <div class="card mb-4" id="courierSection" style="display: none;">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Pilih Kurir</h5>
-                        </div>
-                        <div class="card-body">
-                            <div id="courierLoading" class="text-center" style="display: none;">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2">Menghitung ongkir...</p>
-                            </div>
-                            <div id="courierOptions"></div>
-                            <input type="hidden" name="courier_name" id="courier_name">
-                            <input type="hidden" name="courier_service" id="courier_service">
-                            <input type="hidden" name="courier_details" id="courier_details">
-                            @error('courier_name')
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-
-                <div id="instantShippingContainer" style="display: none;">
-                    <div class="alert alert-info">
-                        <i class="fas fa-motorcycle me-2"></i>
-                        <strong>Catatan:</strong> Layanan ini hanya tersedia untuk area <strong>Kota Bandung</strong>. Ongkos kirim (ongkir) ditanggung sepenuhnya oleh pembeli dan dibayarkan langsung kepada driver.
-                    </div>
-                    <div class="mb-3">
-                        <label for="instant_recipient_name" class="form-label">Nama Penerima <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="instant_recipient_name" name="instant_recipient_name"
-                               value="{{ old('instant_recipient_name', auth()->user()->name) }}" disabled>
-                    </div>
-                    <div class="mb-3">
-                        <label for="instant_recipient_phone" class="form-label">Nomor Telepon <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="instant_recipient_phone" name="instant_recipient_phone"
-                               value="{{ old('instant_recipient_phone', auth()->user()->phone ?? '') }}"
-                               placeholder="08xxxxxxxxxx" disabled>
-                    </div>
-                    <div class="mb-3">
-                        <label for="instant_shipping_address" class="form-label">Alamat Lengkap <span class="text-danger">*</span></label>
-                        <textarea class="form-control" id="instant_shipping_address" name="instant_shipping_address" rows="3"
-                                  placeholder="Masukkan alamat lengkap..." disabled>{{ old('instant_shipping_address') }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="instant_postal_code" class="form-label">Kode Pos <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="instant_postal_code" name="instant_postal_code"
-                               value="{{ old('instant_postal_code') }}"
-                               placeholder="12345" maxlength="5" disabled>
                     </div>
                 </div>
 
@@ -210,6 +145,8 @@
                 </div>
 
                 <input type="hidden" name="shipping_cost" id="shipping_cost" value="0">
+                 <input type="hidden" name="courier_name" id="courier_name">
+                <input type="hidden" name="courier_service" id="courier_service">
 
                 <div class="mb-4">
                     <label for="notes" class="form-label">Catatan (Opsional)</label>
@@ -270,8 +207,6 @@
     </div>
 </div>
 
-
-
 @push('scripts')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -280,35 +215,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const decreaseBtn = document.getElementById('decreaseQty');
     const increaseBtn = document.getElementById('increaseQty');
     const shippingMethodRadios = document.querySelectorAll('input[name="shipping_method"]');
-        const courierShippingContainer = document.getElementById('courierShippingContainer');
     const instantShippingContainer = document.getElementById('instantShippingContainer');
-    const courierSection = document.getElementById('courierSection');
-    const courierLoading = document.getElementById('courierLoading');
-    const courierOptions = document.getElementById('courierOptions');
     const orderSummary = document.getElementById('orderSummary');
     const submitBtn = document.getElementById('submitBtn');
     const shippingCostInput = document.getElementById('shipping_cost');
     const courierNameInput = document.getElementById('courier_name');
     const courierServiceInput = document.getElementById('courier_service');
-    const courierDetailsInput = document.getElementById('courier_details');
     const productPrice = {{ $obat->harga }};
     const maxStock = {{ $obat->stock }};
-    
-    // Courier shipping fields
+
+    // Instant/Pickup shipping fields (now the main fields)
     const recipientNameInput = document.getElementById('recipient_name');
     const recipientPhoneInput = document.getElementById('recipient_phone');
     const shippingAddressInput = document.getElementById('shipping_address');
     const postalCodeInput = document.getElementById('postal_code');
-    const cityInput = document.getElementById('city');
-    const districtInput = document.getElementById('district');
     
-    // Instant shipping fields
-    const instantRecipientName = document.getElementById('instant_recipient_name');
-    const instantRecipientPhone = document.getElementById('instant_recipient_phone');
-    const instantShippingAddress = document.getElementById('instant_shipping_address');
-    const instantPostalCode = document.getElementById('instant_postal_code');
-    
-    let currentShippingMethod = 'courier';
+    let currentShippingMethod = 'instant';
     
     // --- Event Listeners ---
     shippingMethodRadios.forEach(radio => radio.addEventListener('change', handleShippingMethodChange));
@@ -316,49 +238,16 @@ document.addEventListener('DOMContentLoaded', function() {
     increaseBtn.addEventListener('click', () => updateQuantity(1));
     quantityInput.addEventListener('change', () => updateQuantity(0));
     
-    let postalCodeTimeout;
-    postalCodeInput.addEventListener('input', function() {
-        clearTimeout(postalCodeTimeout);
-        const postalCode = this.value.replace(/\D/g, '');
-        this.value = postalCode;
-        if (postalCode.length === 5) {
-            postalCodeTimeout = setTimeout(() => getAreaByPostalCode(postalCode), 500);
-        } else {
-            resetAddressAndCourier();
-        }
-    });
-    
     document.getElementById('purchaseForm').addEventListener('submit', function(e) {
-        // Prepare data based on shipping method before submission
-        prepareFormData();
-        
-        // Custom validation based on shipping method
-        if (currentShippingMethod === 'courier') {
-            if (!shippingCostInput.value) {
-                e.preventDefault();
-                alert('Silakan pilih kurir terlebih dahulu');
-                return;
-            }
-            
-            // Validate courier shipping fields
-            if (!recipientNameInput.value.trim() || 
-                !recipientPhoneInput.value.trim() || 
-                !shippingAddressInput.value.trim() || 
-                !postalCodeInput.value.trim()) {
-                e.preventDefault();
-                alert('Mohon lengkapi semua field pengiriman yang diperlukan.');
-                return;
-            }
-        }
-        
-        // Validate instant shipping fields
+        // Custom validation for instant shipping
         if (currentShippingMethod === 'instant') {
-            if (!instantRecipientName.value.trim() ||
-                !instantRecipientPhone.value.trim() ||
-                !instantShippingAddress.value.trim() ||
-                !instantPostalCode.value.trim()) {
+            if (!recipientNameInput.value.trim() ||
+                !recipientPhoneInput.value.trim() ||
+                !shippingAddressInput.value.trim() ||
+                !postalCodeInput.value.trim()) {
+                
                 e.preventDefault();
-                alert('Mohon lengkapi semua field pengiriman instan yang diperlukan.');
+                alert('Mohon lengkapi semua field informasi pengiriman instan.');
                 return;
             }
         }
@@ -368,53 +257,11 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // --- Core Functions ---
-    function prepareFormData() {
-        if (currentShippingMethod === 'instant') {
-            // Copy instant shipping data to main fields and disable courier fields
-            recipientNameInput.value = instantRecipientName.value;
-            recipientPhoneInput.value = instantRecipientPhone.value;
-            shippingAddressInput.value = instantShippingAddress.value;
-            postalCodeInput.value = instantPostalCode.value;
-            cityInput.value = 'Bandung';
-            districtInput.value = 'Bandung';
-            
-            // Disable instant fields so they don't get submitted
-            instantRecipientName.disabled = true;
-            instantRecipientPhone.disabled = true;
-            instantShippingAddress.disabled = true;
-            instantPostalCode.disabled = true;
-        } else if (currentShippingMethod === 'pickup') {
-            // For pickup, set minimal required data
-            recipientNameInput.value = '{{ auth()->user()->name }}';
-            recipientPhoneInput.value = '{{ auth()->user()->phone ?? "08123456789" }}';
-            shippingAddressInput.value = 'Pickup di Apotek';
-            postalCodeInput.value = '40111';
-            cityInput.value = 'Bandung';
-            districtInput.value = 'Bandung';
-            
-            // Disable instant fields
-            instantRecipientName.disabled = true;
-            instantRecipientPhone.disabled = true;
-            instantShippingAddress.disabled = true;
-            instantPostalCode.disabled = true;
-        } else {
-            // For courier, disable instant fields
-            instantRecipientName.disabled = true;
-            instantRecipientPhone.disabled = true;
-            instantShippingAddress.disabled = true;
-            instantPostalCode.disabled = true;
-        }
-    }
-    
     function handleShippingMethodChange() {
         currentShippingMethod = document.querySelector('input[name="shipping_method"]:checked').value;
         resetState();
-        enableDisableFields();
         
         switch (currentShippingMethod) {
-            case 'courier':
-                courierShippingContainer.style.display = 'block';
-                break;
             case 'instant':
                 instantShippingContainer.style.display = 'block';
                 courierNameInput.value = 'Instant';
@@ -422,6 +269,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 shippingCostInput.value = 0; 
                 orderSummary.style.display = 'block';
                 submitBtn.disabled = false;
+                enableDisableInstantFields(true);
                 break;
             case 'pickup':
                 courierNameInput.value = 'Pickup';
@@ -429,46 +277,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 shippingCostInput.value = 0;
                 orderSummary.style.display = 'block';
                 submitBtn.disabled = false;
+                 enableDisableInstantFields(false);
                 break;
         }
         updateSummary();
     }
     
-    function enableDisableFields() {
-        if (currentShippingMethod === 'courier') {
-            // Enable courier fields, disable instant fields
-            recipientNameInput.disabled = false;
-            recipientPhoneInput.disabled = false;
-            shippingAddressInput.disabled = false;
-            postalCodeInput.disabled = false;
-            
-            instantRecipientName.disabled = true;
-            instantRecipientPhone.disabled = true;
-            instantShippingAddress.disabled = true;
-            instantPostalCode.disabled = true;
-        } else if (currentShippingMethod === 'instant') {
-            // Enable instant fields, disable courier fields
-            instantRecipientName.disabled = false;
-            instantRecipientPhone.disabled = false;
-            instantShippingAddress.disabled = false;
-            instantPostalCode.disabled = false;
-            
-            recipientNameInput.disabled = true;
-            recipientPhoneInput.disabled = true;
-            shippingAddressInput.disabled = true;
-            postalCodeInput.disabled = true;
-        } else {
-            // Pickup - disable all address fields
-            recipientNameInput.disabled = true;
-            recipientPhoneInput.disabled = true;
-            shippingAddressInput.disabled = true;
-            postalCodeInput.disabled = true;
-            
-            instantRecipientName.disabled = true;
-            instantRecipientPhone.disabled = true;
-            instantShippingAddress.disabled = true;
-            instantPostalCode.disabled = true;
-        }
+    function enableDisableInstantFields(enabled) {
+        recipientNameInput.disabled = !enabled;
+        recipientPhoneInput.disabled = !enabled;
+        shippingAddressInput.disabled = !enabled;
+        postalCodeInput.disabled = !enabled;
     }
     
     function updateQuantity(change) {
@@ -478,125 +297,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (qty > maxStock) qty = maxStock;
         quantityInput.value = qty;
         
-        if (currentShippingMethod === 'courier' && cityInput.value) {
-            calculateShipping();
-        }
         updateSummary();
     }
 
-    function getAreaByPostalCode(postalCode) {
-        fetch('{{ route("api.get-area") }}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-            body: JSON.stringify({ postal_code: postalCode })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                cityInput.value = data.data.city;
-                districtInput.value = data.data.district;
-                calculateShipping();
-            } else {
-                alert(data.message || 'Kode pos tidak ditemukan');
-                resetAddressAndCourier();
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Gagal mendapatkan informasi area');
-        });
-    }
-    
-    function calculateShipping() {
-        courierLoading.style.display = 'block';
-        courierOptions.innerHTML = '';
-        courierSection.style.display = 'block';
-        orderSummary.style.display = 'none';
-        submitBtn.disabled = true;
-        
-        fetch('{{ route("api.calculate-shipping") }}', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}'},
-            body: JSON.stringify({
-                obat_id: {{ $medicine->id }},
-                quantity: parseInt(quantityInput.value),
-                postal_code: postalCodeInput.value
-            })
-        })
-        .then(response => {
-             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-             return response.json();
-        })
-        .then(data => {
-            courierLoading.style.display = 'none';
-            if (data.success && data.data.rates.length > 0) {
-                displayCourierOptions(data.data.rates);
-            } else {
-                courierOptions.innerHTML = `<div class="alert alert-warning">${data.message || 'Tidak ada layanan pengiriman yang tersedia untuk area ini.'}</div>`;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            courierLoading.style.display = 'none';
-            courierOptions.innerHTML = '<div class="alert alert-danger">Gagal menghitung ongkir. Silakan coba lagi.</div>';
-        });
-    }
-    
-    function displayCourierOptions(rates) {
-        let html = '<div class="row">';
-        rates.forEach((rate, index) => {
-            const etd = rate.minimum_day === rate.maximum_day 
-                ? `${rate.minimum_day} hari` 
-                : `${rate.minimum_day}-${rate.maximum_day} hari`;
-            html += `
-                <div class="col-md-6 mb-3">
-                    <div class="card courier-option">
-                        <div class="card-body">
-                            <div class="form-check">
-                                <input class="form-check-input" type="radio" name="courier_radio" id="courier_${index}" value="${index}" data-rate='${JSON.stringify(rate)}'>
-                                <label class="form-check-label w-100" for="courier_${index}">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">${rate.courier_name}</h6>
-                                            <small class="text-muted">${rate.service_name}</small>
-                                            <br><small class="text-success">Est. ${etd}</small>
-                                        </div>
-                                        <div class="text-end">
-                                            <strong>Rp ${new Intl.NumberFormat('id-ID').format(rate.price)}</strong>
-                                        </div>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        });
-        html += '</div>';
-        courierOptions.innerHTML = html;
-        
-        document.querySelectorAll('input[name="courier_radio"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                if (this.checked) selectCourier(JSON.parse(this.dataset.rate));
-            });
-        });
-    }
-    
-    function selectCourier(rate) {
-        courierNameInput.value = rate.courier_name;
-        courierServiceInput.value = rate.service_name;
-        shippingCostInput.value = rate.price;
-        courierDetailsInput.value = JSON.stringify(rate);
-        orderSummary.style.display = 'block';
-        submitBtn.disabled = false;
-        updateSummary();
-    }
-    
     function updateSummary() {
         const quantity = parseInt(quantityInput.value);
         const subtotal = productPrice * quantity;
-        const shippingCost = parseInt(shippingCostInput.value) || 0;
-        // Total tidak termasuk ongkir instan
-        const total = subtotal + (currentShippingMethod === 'instant' ? 0 : shippingCost);
+        const shippingCost = 0; // Cost is always 0 for payment, as instant is paid to driver
+        const total = subtotal + shippingCost;
         
         document.getElementById('summaryQty').textContent = quantity;
         document.getElementById('summarySubtotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(subtotal);
@@ -606,31 +314,18 @@ document.addEventListener('DOMContentLoaded', function() {
             summaryShippingEl.textContent = 'Gratis';
         } else if (currentShippingMethod === 'instant') {
             summaryShippingEl.innerHTML = `<strong>Ditanggung Pembeli</strong> <small class="d-block">(Bayar di tempat)</small>`;
-        } else {
-            summaryShippingEl.textContent = shippingCost > 0 ? 'Rp ' + new Intl.NumberFormat('id-ID').format(shippingCost) : '-';
         }
         
         document.getElementById('summaryTotal').textContent = 'Rp ' + new Intl.NumberFormat('id-ID').format(total);
     }
     
     function resetState() {
-        courierShippingContainer.style.display = 'none';
         instantShippingContainer.style.display = 'none';
-        courierSection.style.display = 'none';
         orderSummary.style.display = 'none';
         submitBtn.disabled = true;
         shippingCostInput.value = 0;
         courierNameInput.value = '';
         courierServiceInput.value = '';
-        courierDetailsInput.value = '';
-                courierOptions.innerHTML = '';
-    }
-
-    function resetAddressAndCourier() {
-        cityInput.value = '';
-        districtInput.value = '';
-        resetState();
-        updateSummary();
     }
 
     // Initialize
@@ -639,25 +334,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 @endsection
-
-    <p>Harga: Rp{{ number_format($obat->harga, 0, ',', '.') }}</p>
-    <p>Stok: {{ $obat->stock }}</p>
-
-    <form action="{{ route('checkout.show') }}" method="GET">
-        <input type="hidden" name="obat_id" value="{{ $obat->id }}">
-        <div class="mb-3">
-            <label for="quantity" class="form-label">Jumlah</label>
-            <input type="number" name="quantity" min="1" max="{{ $obat->stock }}" class="form-control" value="1" required>
-        </div>
-        <div class="mb-3">
-            <label for="shipping_method" class="form-label">Metode Pengiriman</label>
-            <select name="shipping_method" class="form-control" required>
-                <option value="pickup">Ambil di Apotek</option>
-                <option value="delivery">Delivery</option>
-                <option value="courier">Kurir Instant</option>
-            </select>
-        </div>
-        <button type="submit" class="btn btn-success">Checkout</button>
-    </form>
-</div>
-@endsection
+```

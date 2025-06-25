@@ -10,10 +10,12 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        if (Auth::check() && Auth::user()->is_admin) {
+        // Periksa apakah user terotentikasi menggunakan guard 'admin'
+        if (Auth::guard('admin')->check()) {
             return $next($request);
         }
 
-        return redirect('/')->with('error', 'Unauthorized access.');
+        // Jika tidak, redirect ke halaman login admin
+        return redirect()->route('admin.login');
     }
 }

@@ -3,29 +3,51 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class AdminLoginController extends Controller
 {
+    use AuthenticatesUsers;
+
+    /**
+     * Ke mana harus redirect setelah login berhasil.
+     *
+     * @var string
+     */
+    protected $redirectTo = '/admin/dashboard'; // Sesuaikan dengan route dashboard admin Anda
+
+    /**
+     * Menampilkan form login admin.
+     */
     public function showLoginForm()
     {
-        return view('auth.admin-login');
+        return view('auth.admin-login'); // Pastikan view ini ada
     }
 
-    public function login(Request $request)
+    /**
+     * Menggunakan guard 'admin' untuk proses otentikasi.
+     */
+    protected function guard()
     {
-        $this->validate($request, [
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        return Auth::guard('admin');
+    }
 
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password, 'is_admin' => 1])) {
-            return redirect()->intended(route('admin.dashboard'));
-        }
+    /**
+     * Menangani permintaan logout untuk admin.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function logout(Request $request)
+    {
+        $this->guard()->logout();
 
-        return redirect()->back()
-            ->withInput($request->only('email'))
-            ->withErrors(['email' => 'These credentials do not match our records.']);
+        $request->session()->invalidate();
+
+        $request->session()->regenerateToken();
+
+        return $this->loggedOut($request) ?: redirect('/admin/login');
     }
 }

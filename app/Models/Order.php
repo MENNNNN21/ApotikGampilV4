@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
+    protected $table = 'orders';
     use HasFactory;
 
     protected $fillable = [
@@ -16,6 +17,8 @@ class Order extends Model
         'user_id',
         'subtotal',
         'shipping_cost',
+        'payment_method',   // <-- TAMBAHKAN INI
+        'shipping_method',
         'total',
         'status',
         'recipient_name',
@@ -34,6 +37,7 @@ class Order extends Model
         'notes',
         'shipped_at',
         'delivered_at',
+        'payment_proof'
     ];
 
     protected $casts = [
@@ -71,6 +75,13 @@ class Order extends Model
     {
         return $this->belongsTo(User::class);
     }
+    public function orderItems()
+    {
+        // 'OrderItem::class' adalah nama model untuk item pesanan Anda.
+        // 'order_id' adalah foreign key di tabel order_items (asumsi default Laravel).
+        return $this->hasMany(OrderItem::class);
+    }
+     
 
     /**
      * Get the order items
@@ -107,30 +118,31 @@ class Order extends Model
     /**
      * Get status label
      */
-    public function getStatusLabelAttribute(): string
-    {
-        return match($this->status) {
-            'pending' => 'Menunggu Pembayaran',
-            'processing' => 'Sedang Diproses',
-            'shipped' => 'Dalam Pengiriman',
-            'delivered' => 'Terkirim',
-            'cancelled' => 'Dibatalkan',
-            default => 'Unknown'
-        };
-    }
+    // di dalam app/Models/Order.php
 
-    /**
-     * Get status color for badge
-     */
-    public function getStatusColorAttribute(): string
-    {
-        return match($this->status) {
-            'pending' => 'warning',
-            'processing' => 'info',
-            'shipped' => 'primary',
-            'delivered' => 'success',
-            'cancelled' => 'danger',
-            default => 'secondary'
-        };
-    }
+public function getStatusLabelAttribute(): string
+{
+    return match($this->status) {
+        'pending' => 'Menunggu Pembayaran',
+        'pending_verification' => 'Menunggu Verifikasi', // <-- TAMBAHKAN INI
+        'processing' => 'Sedang Diproses',
+        'shipped' => 'Dalam Pengiriman',
+        'delivered' => 'Terkirim',
+        'cancelled' => 'Dibatalkan',
+        default => 'Unknown'
+    };
+}
+
+public function getStatusColorAttribute(): string
+{
+    return match($this->status) {
+        'pending' => 'warning',
+        'pending_verification' => 'info', // <-- TAMBAHKAN INI
+        'processing' => 'primary',
+        'shipped' => 'primary',
+        'delivered' => 'success',
+        'cancelled' => 'danger',
+        default => 'secondary'
+    };
+}
 }
