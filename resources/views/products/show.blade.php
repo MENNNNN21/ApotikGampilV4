@@ -1,17 +1,3 @@
-Of course. Based on your request, I have removed the "Pengiriman Kurir" (Courier Shipping) option from both the HTML structure and the corresponding JavaScript logic.
-
-Here are the key changes made:
-
-1.  **Removed HTML Elements**: The radio button for "Pengiriman Kurir" and the entire form section for courier address details (`courierShippingContainer`, `courierSection`) have been deleted.
-2.  **Default Selection**: "Pengiriman Instan" (Instant Shipping) is now the default selected shipping method.
-3.  **Simplified JavaScript**:
-      * All JavaScript functions and variables related to courier shipping (`calculateShipping`, `getAreaByPostalCode`, `displayCourierOptions`, etc.) have been completely removed.
-      * The logic has been streamlined to only handle the "Pengiriman Instan" and "Ambil di Apotek" (Pickup at Pharmacy) options.
-      * The form submission logic and validations have been adjusted to work without the courier option.
-
-Here is the modified and cleaned-up code:
-
-```php
 @extends('layouts.app')
 
 @section('title', $obat->nama)
@@ -19,34 +5,40 @@ Here is the modified and cleaned-up code:
 @section('content')
 <div class="container py-5">
     <div class="row">
-        <div class="col-md-6">
-            <img src="{{ asset('storage/' . $obat->image) }}" alt="{{ $obat->name }}" class="w-full h-auto object-cover rounded-lg">
+        <!-- Gambar Produk -->
+        <div class="col-md-6 mb-4">
+            <div class="border rounded shadow-sm bg-white p-3">
+                <img src="{{ asset('storage/' . $obat->image) }}" alt="{{ $obat->nama }}" class="img-fluid rounded w-100">
+            </div>
         </div>
+
+        <!-- Info Produk -->
         <div class="col-md-6">
-            <h2 class="mb-3">{{ $obat->nama }}</h2>
-            
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <h5 class="text-success">Harga</h5>
+            <h2 class="fw-bold mb-3">{{ $obat->nama }}</h2>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h6 class="text-muted mb-1">Harga</h6>
                     <h4 class="text-primary fw-bold">Rp {{ number_format($obat->harga, 0, ',', '.') }}</h4>
                 </div>
-                <div class="col-md-6">
-                    <h5>Stok</h5>
-                    <p class="badge bg-success fs-6">{{ $obat->stock }} tersedia</p>
+                <div>
+                    <h6 class="text-muted mb-1">Stok</h6>
+                    <span class="badge {{ $obat->stock <= 5 ? 'bg-danger' : 'bg-success' }} fs-6">
+                        {{ $obat->stock }} tersedia
+                    </span>
                 </div>
             </div>
 
             @if($obat->stock > 0)
-            <form action="{{ route('checkout.show', ['product' => $obat->id]) }}" method="get" id="purchaseForm">
+            <form action="{{ route('checkout.show', ['product' => $obat->id]) }}" method="get" id="purchaseForm" class="bg-light p-4 rounded shadow-sm">
                 @csrf
                 <input type="hidden" name="obat_id" value="{{ $obat->id }}">
-                
+
+                <!-- Jumlah -->
                 <div class="mb-4">
-                    <label for="quantity" class="form-label fw-bold">Jumlah</label>
+                    <label class="form-label fw-semibold">Jumlah</label>
                     <div class="input-group" style="max-width: 200px;">
                         <button type="button" class="btn btn-outline-secondary" id="decreaseQty">-</button>
-                        <input type="number" class="form-control text-center" id="quantity" name="quantity" 
-                               value="1" min="1" max="{{ $obat->stock }}" required>
+                        <input type="number" class="form-control text-center" id="quantity" name="quantity" value="1" min="1" max="{{ $obat->stock }}" required>
                         <button type="button" class="btn btn-outline-secondary" id="increaseQty">+</button>
                     </div>
                     @error('quantity')
@@ -54,10 +46,9 @@ Here is the modified and cleaned-up code:
                     @enderror
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Metode Pengiriman</h5>
-                    </div>
+                <!-- Metode Pengiriman -->
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-white fw-semibold">Metode Pengiriman</div>
                     <div class="card-body">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="shipping_method" id="shipping_instant" value="instant" checked>
@@ -65,74 +56,56 @@ Here is the modified and cleaned-up code:
                                 <strong>Pengiriman Instan</strong> (Gojek/GrabExpress)
                             </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="shipping_method" id="shipping_pickup" value="pickup">
-                            <label class="form-check-label" for="shipping_pickup">
-                                <strong>Ambil di Apotek</strong> (Gratis)
-                            </label>
-                        </div>
+                    
                     </div>
                 </div>
 
+                <!-- Form Pengiriman Instan -->
                 <div id="instantShippingContainer" style="display: none;">
-                     <div class="alert alert-info">
+                    <div class="alert alert-info">
                         <i class="fas fa-motorcycle me-2"></i>
-                        <strong>Catatan:</strong> Layanan ini hanya tersedia untuk area <strong>Kota Bandung</strong>. Ongkos kirim (ongkir) ditanggung sepenuhnya oleh pembeli dan dibayarkan langsung kepada driver.
+                        <strong>Catatan:</strong> Hanya tersedia untuk <strong>Kota Bandung</strong>. Ongkir dibayar ke driver.
                     </div>
-                    <div class="card mb-4">
-                         <div class="card-header bg-light">
-                            <h5 class="mb-0">Informasi Pengiriman Instan</h5>
-                        </div>
+
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-white fw-semibold">Informasi Pengiriman Instan</div>
                         <div class="card-body">
-                            <div class="mb-3">
-                                <label for="recipient_name" class="form-label">Nama Penerima <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('recipient_name') is-invalid @enderror" 
-                                       id="recipient_name" name="recipient_name" value="{{ old('recipient_name', auth()->user()->name) }}">
-                                @error('recipient_name')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control @error('recipient_name') is-invalid @enderror" id="recipient_name" name="recipient_name" value="{{ old('recipient_name', auth()->user()->name) }}">
+                                <label for="recipient_name">Nama Penerima</label>
+                                @error('recipient_name') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-                            <div class="mb-3">
-                                <label for="recipient_phone" class="form-label">Nomor Telepon <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('recipient_phone') is-invalid @enderror" 
-                                       id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone', auth()->user()->phone ?? '') }}" 
-                                       placeholder="08xxxxxxxxxx">
-                                @error('recipient_phone')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control @error('recipient_phone') is-invalid @enderror" id="recipient_phone" name="recipient_phone" value="{{ old('recipient_phone', auth()->user()->phone ?? '') }}" placeholder="08xxxxxxxxxx">
+                                <label for="recipient_phone">Nomor Telepon</label>
+                                @error('recipient_phone') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-                            <div class="mb-3">
-                                <label for="shipping_address" class="form-label">Alamat Lengkap <span class="text-danger">*</span></label>
-                                <textarea class="form-control @error('shipping_address') is-invalid @enderror" 
-                                          id="shipping_address" name="shipping_address" rows="3" 
-                                          placeholder="Masukkan alamat lengkap...">{{ old('shipping_address') }}</textarea>
-                                @error('shipping_address')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+
+                            <div class="form-floating mb-3">
+                                <textarea class="form-control @error('shipping_address') is-invalid @enderror" id="shipping_address" name="shipping_address" placeholder="Alamat lengkap" style="height: 100px">{{ old('shipping_address') }}</textarea>
+                                <label for="shipping_address">Alamat Lengkap</label>
+                                @error('shipping_address') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
-                            <div class="mb-3">
-                                <label for="postal_code" class="form-label">Kode Pos <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control @error('postal_code') is-invalid @enderror"
-                                       id="postal_code" name="postal_code" value="{{ old('postal_code') }}"
-                                       placeholder="Contoh: 40111" maxlength="5">
-                                @error('postal_code')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+
+                            <div class="form-floating mb-3">
+                                <input type="text" class="form-control @error('postal_code') is-invalid @enderror" id="postal_code" name="postal_code" value="{{ old('postal_code') }}" placeholder="40111" maxlength="5">
+                                <label for="postal_code">Kode Pos</label>
+                                @error('postal_code') <div class="invalid-feedback">{{ $message }}</div> @enderror
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="card mb-4" id="orderSummary" style="display: none;">
-                    <div class="card-header bg-light">
-                        <h5 class="mb-0">Ringkasan Pesanan</h5>
-                    </div>
+                <!-- Ringkasan Pesanan -->
+                <div id="orderSummary" class="card shadow-sm mb-4" style="display: none;">
+                    <div class="card-header bg-white fw-semibold">Ringkasan Pesanan</div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between">
                             <span>Subtotal (<span id="summaryQty">1</span> item)</span>
                             <span id="summarySubtotal">Rp {{ number_format($obat->harga, 0, ',', '.') }}</span>
                         </div>
-                        <div class="d-flex justify-content-between mb-2">
+                        <div class="d-flex justify-content-between">
                             <span>Ongkos Kirim</span>
                             <span id="summaryShipping">-</span>
                         </div>
@@ -145,59 +118,57 @@ Here is the modified and cleaned-up code:
                 </div>
 
                 <input type="hidden" name="shipping_cost" id="shipping_cost" value="0">
-                 <input type="hidden" name="courier_name" id="courier_name">
+                <input type="hidden" name="courier_name" id="courier_name">
                 <input type="hidden" name="courier_service" id="courier_service">
 
-                <div class="mb-4">
-                    <label for="notes" class="form-label">Catatan (Opsional)</label>
-                    <textarea class="form-control" id="notes" name="notes" rows="2" 
-                              placeholder="Catatan untuk penjual...">{{ old('notes') }}</textarea>
+                <!-- Catatan -->
+                <div class="form-floating mb-4">
+                    <textarea class="form-control" id="notes" name="notes" style="height: 80px">{{ old('notes') }}</textarea>
+                    <label for="notes">Catatan untuk penjual (opsional)</label>
                 </div>
 
+                <!-- Tombol -->
                 <div class="d-grid">
-                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" >
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
                         <i class="fas fa-shopping-cart me-2"></i>Beli Sekarang
                     </button>
                 </div>
             </form>
             @else
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                Produk ini sedang tidak tersedia.
+            <div class="alert alert-warning mt-4">
+                <i class="fas fa-exclamation-triangle me-2"></i> Produk ini sedang tidak tersedia.
             </div>
             @endif
         </div>
     </div>
 
-    {{-- Detail Produk Section --}}
+    <!-- Detail Produk -->
     <div class="row mt-5">
         <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="mb-0">Detail Produk</h5>
-                </div>
+            <div class="card shadow-sm">
+                <div class="card-header bg-white fw-semibold">Detail Produk</div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row mb-3">
                         <div class="col-md-6">
-                            <h6>Deskripsi</h6>
+                            <h6 class="fw-semibold">Deskripsi</h6>
                             <p>{{ $obat->deskripsi }}</p>
                         </div>
                         <div class="col-md-6">
-                            <h6>Dosis</h6>
+                            <h6 class="fw-semibold">Dosis</h6>
                             <p>{{ $obat->dosis }}</p>
                         </div>
                     </div>
-                    
+
                     @if($obat->efek_samping)
-                    <div class="mt-3">
-                        <h6>Efek Samping</h6>
+                    <div class="mb-3">
+                        <h6 class="fw-semibold">Efek Samping</h6>
                         <p>{{ $obat->efek_samping }}</p>
                     </div>
                     @endif
 
                     @if($obat->kontraindikasi)
-                    <div class="mt-3">
-                        <h6>Kontraindikasi</h6>
+                    <div>
+                        <h6 class="fw-semibold">Kontraindikasi</h6>
                         <p>{{ $obat->kontraindikasi }}</p>
                     </div>
                     @endif

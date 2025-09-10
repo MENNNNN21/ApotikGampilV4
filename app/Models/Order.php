@@ -124,11 +124,12 @@ public function getStatusLabelAttribute(): string
 {
     return match($this->status) {
         'pending' => 'Menunggu Pembayaran',
-        'pending_verification' => 'Menunggu Verifikasi', // <-- TAMBAHKAN INI
+        'pending_verification' => 'Menunggu Verifikasi',
         'processing' => 'Sedang Diproses',
         'shipped' => 'Dalam Pengiriman',
         'delivered' => 'Terkirim',
         'cancelled' => 'Dibatalkan',
+        'selesai' => 'Selesai', // ✅ TAMBAHKAN INI
         default => 'Unknown'
     };
 }
@@ -136,12 +137,13 @@ public function getStatusLabelAttribute(): string
 public function getStatusColorAttribute(): string
 {
     return match($this->status) {
-        'pending' => 'warning',
-        'pending_verification' => 'info', // <-- TAMBAHKAN INI
+         'pending' => 'warning',
+        'pending_verification' => 'info',
         'processing' => 'primary',
         'shipped' => 'primary',
         'delivered' => 'success',
         'cancelled' => 'danger',
+        'selesai' => 'success', // ✅ TAMBAHKAN INI
         default => 'secondary'
     };
 }

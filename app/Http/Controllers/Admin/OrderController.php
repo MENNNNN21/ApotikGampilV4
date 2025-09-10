@@ -103,12 +103,21 @@ class OrderController extends Controller
     /**
      * Mengubah status pesanan secara umum (misal: dikirim, selesai).
      */
-    public function updateStatus(Request $request, Order $order)
+     public function updateStatus(Request $request, Order $order)
     {
-        $request->validate([
-            'status' => 'required|in:processing,shipped,delivered,cancelled',
-            'tracking_number' => 'nullable|required_if:status,shipped|string|max:255',
-        ]);
+        // Validasi berbeda untuk pickup dan delivery
+        if ($order->shipping_method == 'pickup') {
+            // Untuk pickup, tidak perlu tracking number
+            $request->validate([
+                'status' => 'required|in:processing,delivered,cancelled',
+            ]);
+        } else {
+            // Untuk delivery, tracking number diperlukan jika status shipped
+            $request->validate([
+                'status' => 'required|in:processing,shipped,delivered,cancelled',
+                'tracking_number' => 'nullable|required_if:status,shipped|string|max:255',
+            ]);
+        }
 
         $newStatus = $request->input('status');
         
@@ -124,10 +133,49 @@ class OrderController extends Controller
         // Jika status diubah menjadi 'delivered', simpan tanggal diterima
         if ($newStatus == 'delivered') {
             $updateData['delivered_at'] = now();
+            
+            // Untuk pickup, tidak perlu tracking number
+            if ($order->shipping_method == 'pickup') {
+                $updateData['tracking_number'] = null;
+            }
         }
 
         $order->update($updateData);
 
-        return redirect()->route('admin.orders.show', $order)->with('success', 'Status pesanan berhasil diperbarui.');
+        // Pesan sukses yang berbeda untuk pickup dan delivery
+        if ($order->shipping_method == 'pickup') {
+            $message = match($newStatus) {
+                'delivered' => 'Pesanan berhasil ditandai sebagai sudah diambil di apotek.',
+                default => 'Status pesanan berhasil diperbarui.'
+            };
+        } else {
+            $message = match($newStatus) {
+                'shipped' => 'Pesanan berhasil ditandai sebagai dalam pengiriman.',
+                'delivered' => 'Pesanan berhasil ditandai sebagai sudah diterima.',
+                default => 'Status pesanan berhasil diperbarui.'
+            };
+        }
+
+        return redirect()->route('admin.orders.show', $order)->with('success', $message);
     }
+
+    public function markAsPickedUp($id)
+{
+    $order = Order::findOrFail($id);
+
+    if ($order->shipping_method !== 'pickup') {
+        return redirect()->back()->with('error', 'Hanya pesanan dengan metode pickup yang bisa ditandai sebagai diambil.');
+    }
+
+    if ($order->is_picked_up) {
+        return redirect()->back()->with('info', 'Pesanan sudah ditandai sebagai diambil.');
+    }
+
+    $order->is_picked_up = true;
+    $order->status = 'selesai'; // atau status lain jika ingin ditandai sebagai selesai
+    $order->save();
+
+    return redirect()->back()->with('success', 'Pesanan berhasil ditandai sebagai sudah diambil.');
+}
+
 }

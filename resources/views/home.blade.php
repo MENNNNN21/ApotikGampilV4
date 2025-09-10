@@ -23,7 +23,7 @@
                     
                     <p class="lead text-muted mb-4">
                         Solusi kesehatan keluarga Anda dengan pelayanan profesional, 
-                        obat berkualitas, dan konsultasi ahli yang terpercaya sejak 2020.
+                        obat berkualitas, dan konsultasi ahli yang terpercaya sejak 2023.
                     </p>
                     
                     <!-- Trust Indicators -->

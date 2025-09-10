@@ -53,7 +53,7 @@ class Obat extends Model
      */
     public function kategori()
     {
-        return $this->belongsTo(ObatKategori::class, 'kategori_id');
+        return $this->belongsTo(ObatKategori::class, 'category_id');  // Sesuaikan dengan kolom database
     }
 
     /**

@@ -10,9 +10,7 @@
             <a href="{{ route('admin.products.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus mr-2"></i>Tambah Obat
             </a>
-            
         </div>
-        
     </div>
 
     @if(session('success'))
@@ -36,11 +34,10 @@
                             <th>Kategori</th>
                             <th>Deskripsi</th>
                             <th>Dosis</th>
-                            <th>berat</th>
+                            <th>Berat</th>
                             <th>Stock</th>
                             <th>Efek Samping</th>
                             <th>Gambar</th>
-                            
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -49,14 +46,13 @@
                         <tr>
                             <td>{{ $loop->iteration }}</td>
                             <td>{{ $product->name }}</td>
-                            <td>{{ number_format($product->harga, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($product->harga, 0, ',', '.') }}</td>
                             <td>{{ $product->kategori->name ?? 'Kategori tidak ditemukan' }}</td>
                             <td>{{ Str::limit($product->deskripsi, 50) }}</td>
                             <td>{{ Str::limit($product->dosis, 50) }}</td>
                             <td>{{ $product->weight ? $product->weight . ' gram' : 'Tidak ada' }}</td>
                             <td>{{ $product->stock ?? 'Tidak ada' }}</td>
                             <td>{{ Str::limit($product->efek_samping, 50) }}</td>
-                            
                             <td>
                                 @if($product->image)
                                     <img src="{{ asset('storage/' . $product->image) }}" 

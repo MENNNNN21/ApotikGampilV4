@@ -10,7 +10,7 @@
             <p class="text-danger">Total Pembayaran: <strong>Rp {{ number_format($order->total, 0, ',', '.') }}</strong></p>
 
             {{-- Ganti 'qris-image.png' dengan nama file gambar QRIS Anda --}}
-            <img src="{{ asset('images/qris-image.png') }}" alt="QRIS Code" class="img-fluid my-3">
+            <img src="{{ asset('img/qris-image.jpg') }}" alt="QRIS Code" class="img-fluid my-3">
 
             <div class="alert alert-info">
                 Silakan scan kode QR di atas menggunakan aplikasi E-Wallet atau Mobile Banking Anda.

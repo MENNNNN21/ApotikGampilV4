@@ -17,7 +17,7 @@ class ServiceController extends Controller
     {
         $service = Service::findOrFail($id);
         $waTemplate = urlencode($service->whatsapp_template);
-        $waNumber = env('WHATSAPP_NUMBER', '6285123456789');
+        $waNumber = env('WHATSAPP_NUMBER', '6285194295020');
         return redirect("https://wa.me/{$waNumber}?text={$waTemplate}");
     }
 }

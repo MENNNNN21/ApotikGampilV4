@@ -19,7 +19,7 @@ class KonsultasiController extends Controller
             'message' => 'required'
         ]);
 
-        $waNumber = env('WHATSAPP_NUMBER', '6285123456789');
+        $waNumber = env('WHATSAPP_NUMBER', '6285194295020');
         $message = urlencode("Nama: {$validated['name']}\nTelp: {$validated['phone']}\nPesan: {$validated['message']}");
         
         return redirect("https://wa.me/{$waNumber}?text={$message}");

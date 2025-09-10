@@ -3,31 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - Apotik Gampil</title>
-    <!-- Bootstrap CSS -->
-    
+
     <!-- Custom CSS -->
     <link href="{{ asset('css/style.css') }}" rel="stylesheet">
-    <!-- Vite -->
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+
     <style>
-        /* Custom Navbar Styles */
+        /* === Flex Layout Fix === */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        main {
+            flex: 1;
+        }
+
+        footer {
+            background-color: #111;
+            color: #fff;
+            padding: 2rem 0;
+        }
+
+        footer a {
+            color: #ddd;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: #fff;
+        }
+
+        /* === Navbar Style (tidak berubah dari kamu) === */
         .navbar {
             background: linear-gradient(135deg, #f0f0f1 0%, #fefdff 100%);
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             padding: 1rem 0;
             transition: all 0.3s ease;
         }
-        
+
         .navbar.scrolled {
             padding: 0.5rem 0;
             box-shadow: 0 2px 20px rgba(0,0,0,0.15);
         }
-        
+
         .navbar-brand {
             font-weight: 700;
             font-size: 1.5rem;
@@ -37,17 +66,17 @@
             align-items: center;
             transition: transform 0.3s ease;
         }
-        
+
         .navbar-brand:hover {
             transform: scale(1.05);
         }
-        
+
         .navbar-brand img {
             height: 40px;
             margin-right: 10px;
             border-radius: 8px;
         }
-        
+
         .navbar-nav .nav-link {
             color: rgba(0, 0, 0, 0.9) !important;
             font-weight: 500;
@@ -58,7 +87,7 @@
             position: relative;
             overflow: hidden;
         }
-        
+
         .navbar-nav .nav-link::before {
             content: '';
             position: absolute;
@@ -69,29 +98,28 @@
             background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
             transition: left 0.5s;
         }
-        
+
         .navbar-nav .nav-link:hover::before {
             left: 100%;
         }
-        
+
         .navbar-nav .nav-link:hover {
             color: #000000 !important;
             background: rgba(255,255,255,0.15);
             transform: translateY(-2px);
             box-shadow: 0 4px 10px rgba(0,0,0,0.2);
         }
-        
+
         .navbar-nav .nav-link.active {
             color: #fff !important;
             background: rgba(255,255,255,0.2);
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-        
-        /* Profile Dropdown Styles */
+
         .profile-dropdown {
             position: relative;
         }
-        
+
         .profile-toggle {
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(192, 15, 15, 0.2);
@@ -105,7 +133,7 @@
             align-items: center;
             gap: 0.5rem;
         }
-        
+
         .profile-toggle:hover {
             background: rgba(192, 15, 15, 0.1);
             border-color: rgba(192, 15, 15, 0.4);
@@ -113,7 +141,7 @@
             box-shadow: 0 4px 15px rgba(192, 15, 15, 0.2);
             color: #c00f0f !important;
         }
-        
+
         .profile-avatar {
             width: 32px;
             height: 32px;
@@ -126,7 +154,7 @@
             font-weight: bold;
             font-size: 0.9rem;
         }
-        
+
         .dropdown-menu {
             border: none;
             box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -136,40 +164,36 @@
             background: rgba(255,255,255,0.95);
             backdrop-filter: blur(10px);
         }
-        
+
         .dropdown-item {
             padding: 0.7rem 1.5rem;
             transition: all 0.3s ease;
             color: #333;
-            border-radius: 0;
         }
-        
+
         .dropdown-item:hover {
             background: rgba(192, 15, 15, 0.1);
             color: #c00f0f;
             transform: translateX(5px);
         }
-        
+
         .dropdown-divider {
             margin: 0.5rem 0;
             border-color: rgba(0,0,0,0.1);
         }
-        
+
         .navbar-toggler {
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 8px;
             padding: 0.5rem;
             transition: all 0.3s ease;
         }
-        
+
         .navbar-toggler:hover {
             border-color: rgba(255,255,255,0.6);
             background: rgba(255,255,255,0.1);
         }
-        
-       
-        
-        /* Mobile responsive */
+
         @media (max-width: 991.98px) {
             .navbar-collapse {
                 margin-top: 1rem;
@@ -177,41 +201,37 @@
                 border-radius: 15px;
                 padding: 1rem;
                 backdrop-filter: blur(10px);
-                
             }
-            
+
             .navbar-nav .nav-link {
                 margin: 0.2rem 0;
                 text-align: center;
             }
-            
+
             .profile-dropdown {
                 margin-top: 1rem;
                 text-align: center;
             }
-            
+
             .profile-toggle {
                 justify-content: center;
-                width: fit-content;
                 margin: 0 auto;
             }
         }
-        
-        /* Add some animation to the brand logo */
+
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-3px); }
         }
-        
+
         .navbar-brand img {
             animation: float 3s ease-in-out infinite;
         }
-        
-        /* Hover effect for navigation items */
+
         .nav-item {
             position: relative;
         }
-        
+
         .nav-item::after {
             content: '';
             position: absolute;
@@ -223,12 +243,11 @@
             transition: all 0.3s ease;
             transform: translateX(-50%);
         }
-        
+
         .nav-item:hover::after {
             width: 80%;
         }
-        
-        /* User welcome text animation */
+
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -239,113 +258,67 @@
                 transform: translateY(0);
             }
         }
-        
+
         .user-welcome {
             animation: fadeInUp 0.5s ease-out;
         }
     </style>
 </head>
 <body>
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg fixed-top">
         <div class="container">
             <a class="navbar-brand" href="{{ route('home') }}">
                 <span>Apotik Gampil</span>
             </a>
-            <button class="navbar-toggler " type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('home') }}">
-                            <i class="fas fa-home me-1"></i>Profil
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('services') }}">
-                            <i class="fas fa-stethoscope me-1"></i>Layanan
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('products') }}">
-                            <i class="fas fa-pills me-1"></i>Produk
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('articles') }}">
-                            <i class="fas fa-newspaper me-1"></i>Artikel
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('consultation.index') }}">
-                            <i class="fas fa-user-md me-1"></i>Konsultasi
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('contact') }}">
-                            <i class="fas fa-phone me-1"></i>Kontak
-                        </a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('home') }}"><i class="fas fa-home me-1"></i>Profil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('services') }}"><i class="fas fa-stethoscope me-1"></i>Layanan</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('products') }}"><i class="fas fa-pills me-1"></i>Produk</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('articles') }}"><i class="fas fa-newspaper me-1"></i>Artikel</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('consultation.index') }}"><i class="fas fa-user-md me-1"></i>Konsultasi</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('contact') }}"><i class="fas fa-phone me-1"></i>Kontak</a></li>
                 </ul>
-                
-                <!-- Profile Section -->
                 <div class="navbar-nav">
                     @auth
                         <div class="nav-item dropdown profile-dropdown">
                             <a class="profile-toggle dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <div class="profile-avatar">
-                                    {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                                </div>
+                                <div class="profile-avatar">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</div>
                                 <span class="user-welcome">{{ Auth::user()->name }}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('profile.show') }}">
-                                        <i class="fas fa-user me-2"></i>Profil Saya
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item" href="{{route('orders.index')}}">
-                                        <i class="fas fa-shopping-cart me-2"></i>Pesanan
-                                    </a>
-                                <li>
-                                    <a class="dropdown-item" href="{{ route('profile.edit') }}">
-                                        <i class="fas fa-cog me-2"></i>Edit Profil
-                                    </a>
-                                </li>
+                                <li><a class="dropdown-item" href="{{ route('profile.show') }}"><i class="fas fa-user me-2"></i>Profil Saya</a></li>
+                                <li><a class="dropdown-item" href="{{ route('orders.index') }}"><i class="fas fa-shopping-cart me-2"></i>Pesanan</a></li>
+                                <li><a class="dropdown-item" href="{{ route('profile.edit') }}"><i class="fas fa-cog me-2"></i>Edit Profil</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
                                     <form method="POST" action="{{ route('logout') }}" class="d-inline">
                                         @csrf
-                                        <button type="submit" class="dropdown-item">
-                                            <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                        </button>
+                                        <button type="submit" class="dropdown-item"><i class="fas fa-sign-out-alt me-2"></i>Logout</button>
                                     </form>
                                 </li>
                             </ul>
                         </div>
                     @else
-                        <div class="nav-item">
-                            <a class="nav-link" href="{{ route('login') }}">
-                                <i class="fas fa-sign-in-alt me-1"></i>Login
-                            </a>
-                        </div>
-                        <div class="nav-item">
-                            <a class="nav-link" href="{{ route('register') }}">
-                                <i class="fas fa-user-plus me-1"></i>Register
-                            </a>
-                        </div>
+                        <div class="nav-item"><a class="nav-link" href="{{ route('login') }}"><i class="fas fa-sign-in-alt me-1"></i>Login</a></div>
+                        <div class="nav-item"><a class="nav-link" href="{{ route('register') }}"><i class="fas fa-user-plus me-1"></i>Register</a></div>
                     @endauth
                 </div>
             </div>
         </div>
     </nav>
 
+    <!-- Main Content -->
     <main class="py-4 mt-5">
         @yield('content')
     </main>
 
-     <footer class="bg-dark text-light py-4">
+    <!-- Footer -->
+    <footer class="bg-dark text-light">
         <div class="container">
             <div class="row">
                 <div class="col-md-4">
@@ -370,10 +343,9 @@
             </div>
         </div>
     </footer>
-     
-    
+
+    <!-- Scripts -->
     <script>
-        // Add scroll effect to navbar
         window.addEventListener('scroll', function() {
             const navbar = document.querySelector('.navbar');
             if (window.scrollY > 50) {
@@ -382,21 +354,19 @@
                 navbar.classList.remove('scrolled');
             }
         });
-        
-        // Close dropdown when clicking outside
+
         document.addEventListener('click', function(event) {
             const dropdown = document.querySelector('.profile-dropdown');
-            const dropdownMenu = document.querySelector('.dropdown-menu');
-            
             if (dropdown && !dropdown.contains(event.target)) {
-                const dropdownToggle = dropdown.querySelector('.dropdown-toggle');
-                if (dropdownToggle && dropdownToggle.getAttribute('aria-expanded') === 'true') {
-                    dropdownToggle.click();
+                const toggle = dropdown.querySelector('.dropdown-toggle');
+                if (toggle && toggle.getAttribute('aria-expanded') === 'true') {
+                    toggle.click();
                 }
             }
         });
     </script>
-    
+
     @stack('scripts')
 </body>
 </html>
+    
